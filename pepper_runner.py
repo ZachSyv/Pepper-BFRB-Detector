@@ -27,6 +27,12 @@ app.session.setClientAuthenticatorFactory(factory)
 app.start()
 print("started")
 
+#send camera information to local machine
 
-tts = app.session.service("ALTextToSpeech")
-tts.say("Hello there!")
+#recive the behaviour detected from the local machine
+
+behaviour_detected = "nailbiting"
+
+if (behaviour_detected == "nailbiting"):
+    tts = app.session.service("ALTextToSpeech")
+    tts.say("Please stop biting your nails")
