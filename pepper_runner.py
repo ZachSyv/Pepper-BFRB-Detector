@@ -39,7 +39,7 @@ resolution = 2    # VGA
 colorSpace = 11   # RGB
 fps = 5
 
-videoClient = video_service.subscribeCamera("python_client", 0, resolution, colorSpace, 20)
+videoClient = video_service.subscribeCamera("python_client", 0, resolution, colorSpace, fps)
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
 out = cv2.VideoWriter('output.avi', fourcc, fps, (640, 480))
 
