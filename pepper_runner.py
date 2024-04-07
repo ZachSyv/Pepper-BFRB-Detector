@@ -39,7 +39,7 @@ resolution = 2    # VGA
 colorSpace = 11   # RGB
 fps = 5
 
-videoClient = video_service.subscribeCamera("python_client", 0, resolution, colorSpace, 20)
+videoClient = video_service.subscribeCamera("python_client", 0, resolution, colorSpace, 5)
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
 out = cv2.VideoWriter('output.avi', fourcc, fps, (640, 480))
 
@@ -70,11 +70,3 @@ video_service.unsubscribe(videoClient)
 out.release()
 
 print('finished recording')
-
-#recive the behaviour detected from the local machine
-
-# behaviour_detected = "nailbiting"
-
-# if (behaviour_detected == "nailbiting"):
-#     tts = app.session.service("ALTextToSpeech")
-#     tts.say("Please stop biting your nails")
