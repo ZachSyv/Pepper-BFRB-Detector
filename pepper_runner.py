@@ -5,6 +5,10 @@ import os
 from PIL import Image
 import cv2
 import numpy as np
+from keras.models import load_model
+
+
+model = load_model('trained_nasNetLarge_model.keras')
 
 class Authenticator:
 
@@ -61,6 +65,13 @@ while end_time - start_time < duration:
     frame = np.frombuffer(image_bytes, dtype=np.uint8).reshape(imageHeight, imageWidth, 3)
 
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+    
+    im = frame.resize((331, 331))
+    im_array = np.array(im)
+    im_array = im_array.astype('float32')/255.0
+    im_array = np.expand_dims(im_array, axis = 0)
+    prediction = model.predict(im_array)
+    print(prediction)
    
     out.write(frame)
     end_time = time.time()
