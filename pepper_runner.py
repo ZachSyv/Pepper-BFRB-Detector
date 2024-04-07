@@ -1,6 +1,7 @@
 import qi # pip install qi is needed to import this library
 import sys
 import time
+import os
 from PIL import Image
 
 class Authenticator:
@@ -62,6 +63,9 @@ im = Image.frombytes("RGB", (imageWidth, imageHeight), image_bytes)
 im.save("camImage.png", "PNG")
 
 im.show()
+
+print("deleting image")
+os.remove("camImage.png")
 
 #recive the behaviour detected from the local machine
 
