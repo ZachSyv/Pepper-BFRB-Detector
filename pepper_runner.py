@@ -3,6 +3,8 @@ import sys
 import time
 import os
 from PIL import Image
+import cv2
+import numpy as np
 
 class Authenticator:
 
@@ -35,37 +37,39 @@ print("started")
 video_service = app.session.service("ALVideoDevice")
 resolution = 2    # VGA
 colorSpace = 11   # RGB
+fps = 5
 
-videoClient = video_service.subscribeCamera("python_client", 0, resolution, colorSpace, 5)
+videoClient = video_service.subscribeCamera("python_client", 0, resolution, colorSpace, 20)
+fourcc = cv2.VideoWriter_fourcc(*'XVID')
+out = cv2.VideoWriter('output.avi', fourcc, fps, (640, 480))
 
-t0 = time.time()
+start_time = time.time()
+duration = 10  # seconds
+end_time = time.time()
 
-# Get a camera image.
-# image[6] contains the image data passed as an array of ASCII chars.
-naoImage = video_service.getImageRemote(videoClient)
+while end_time - start_time < duration:
 
-t1 = time.time()
+    # Get a camera image.
+    # image[6] contains the image data passed as an array of ASCII chars.
+    naoImage = video_service.getImageRemote(videoClient)
 
-# Time the image transfer.
-print("acquisition delay ", t1 - t0)
+    imageWidth = naoImage[0]
+    imageHeight = naoImage[1]
+    array = naoImage[6]
+    image_bytes = bytes(bytearray(array))
+
+    frame = np.frombuffer(image_bytes, dtype=np.uint8).reshape(imageHeight, imageWidth, 3)
+
+    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+   
+    out.write(frame)
+    end_time = time.time()
+    print("Current delay", end_time - start_time)
 
 video_service.unsubscribe(videoClient)
+out.release()
 
-imageWidth = naoImage[0]
-imageHeight = naoImage[1]
-array = naoImage[6]
-image_bytes = bytes(array)
-
-# Create a PIL Image from our pixel array.
-im = Image.frombytes("RGB", (imageWidth, imageHeight), image_bytes)
-
-# Save the image.
-im.save("camImage.png", "PNG")
-
-im.show()
-
-print("deleting image")
-os.remove("camImage.png")
+print('finished recording')
 
 #recive the behaviour detected from the local machine
 
