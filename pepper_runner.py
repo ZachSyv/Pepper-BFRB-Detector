@@ -87,7 +87,7 @@ while end_time - start_time < duration:
                 tts.say("You are pulling your beard")
             elif behavior == 'nail bitting':
                 tts.say("You are biting your nails")
-                time.sleep(5) # wait for 5 seconds to prevent multiple activations for the same behavior
+            time.sleep(5) # wait for 5 seconds to prevent multiple activations for the same behavior
         else:
             print(classes[predicted_classes[0]])
             behavior = 'non-bfrb'
