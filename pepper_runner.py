@@ -61,9 +61,6 @@ predictions_dict = {
 
 print('started')
 
-tts = app.session.service("ALTextToSpeech")
-tts.say("Dedicas lbaba o mama o nizar lhbil, tahiya likom mn canada sfu")
-
 option = 'y'
 
 while option == 'y':
