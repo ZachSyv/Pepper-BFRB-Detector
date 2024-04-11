@@ -80,7 +80,14 @@ while end_time - start_time < duration:
 
         if predicted_classes[0] != 3 and np.max(prediction) > 0.6:
             behavior = classes[predicted_classes[0]]
-            break
+            time.sleep(5) # wait for 5 seconds to prevent multiple activations for the same behavior
+            tts = app.session.service("ALTextToSpeech")
+            if behavior == 'hair pulling':
+                tts.say("Stop pulling your hair")
+            elif behavior == 'beard pulling':
+                tts.say("Stop pulling your beard")
+            elif behavior == 'nail bitting':
+                tts.say("Stop biting your nails")
         else:
             print(classes[predicted_classes[0]])
             behavior = 'non-bfrb'
@@ -100,13 +107,6 @@ out.release()
 
 print('finished recording')
 
-tts = app.session.service("ALTextToSpeech")
 
-if behavior == 'hair pulling':
-    tts.say("Stop pulling your hair")
-elif behavior == 'beard pulling':
-    tts.say("Stop pulling your beard")
-elif behavior == 'nail bitting':
-    tts.say("Stop biting your nails")
-else:
-    tts.say("you're fine")
+# else:
+#     tts.say("you're fine")
