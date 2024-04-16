@@ -58,7 +58,7 @@ These are randomly assigned. After running the *data_cleaning.py* file, your dat
         ├── Hair-Pulling    
         ├── Nail-Biting     
         └── Non-BFRB  
-  ├── validation      
+  └── validation      
         ├── Beard-Pulling    
         ├── Hair-Pulling    
         ├── Nail-Biting     
