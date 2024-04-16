@@ -45,7 +45,7 @@ These are randomly assigned. After running the *data_cleaning.py* file, your dat
 dataset/  
 │   
 ├── images/    
-│       ├── Beard-Pulling/    
+       ├── Beard-Pulling/    
 │       ├── Hair-Pulling/    
 │       ├── Nail-Biting/     
 │       └── Non-BFRB/  
