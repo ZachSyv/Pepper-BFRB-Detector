@@ -30,7 +30,7 @@ The dataset collected for this project is provided as a zip file.
 ## Data Preprocessing
 For this part of the code, you need to run the file *data_cleaning.py*. This part of the code assumes that the dataset provided has the following structure:
 
-dataset/
+dataset/  
 │   
 └── images/  
     ├── Beard-Pulling/  
@@ -42,7 +42,7 @@ dataset/
 The code outputs training, testing, and validation splits. 60% of the original data goes toward training, 20% goes toward validation, and 20% goes toward testing.
 These are randomly assigned. After running the *data_cleaning.py* file, your dataset directory should look like this:
 
-dataset/
+dataset/  
 │   
 ├── images/    
 │       ├── Beard-Pulling/    
