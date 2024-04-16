@@ -40,6 +40,7 @@ For this part of the code, you need to run the file *data_cleaning.py*. This par
 
 The code outputs training, testing, and validation splits. 60% of the original data goes toward training, 20% goes toward validation, and 20% goes toward testing.
 These are randomly assigned. After running the *data_cleaning.py* file, your dataset directory should look like this:
+
   dataset/
   │   
   ├── images  
