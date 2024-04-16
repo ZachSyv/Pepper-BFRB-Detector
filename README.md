@@ -38,6 +38,7 @@ dataset/
     ├── Nail-Biting/
     └── Non-BFRB/
 
+
 The code outputs training, testing, and validation splits. 60% of the original data goes toward training, 20% goes toward validation, and 20% goes toward testing.
 These are randomly assigned. After running the *data_cleaning.py* file, your dataset directory should look like this:
 
