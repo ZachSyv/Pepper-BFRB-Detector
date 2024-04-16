@@ -30,7 +30,7 @@ The dataset collected for this project is provided as a zip file.
 ## Data Preprocessing
 For this part of the code, you need to run the file *data_cleaning.py*. This part of the code assumes that the dataset provided has the following structure:
 
- dataset/
+dataset/
 │   
 └── images/
     ├── Beard-Pulling/
