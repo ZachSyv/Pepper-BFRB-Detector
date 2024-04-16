@@ -32,11 +32,11 @@ For this part of the code, you need to run the file *data_cleaning.py*. This par
 
 dataset/
 │   
-└── images/
-    ├── Beard-Pulling/
-    ├── Hair-Pulling/
-    ├── Nail-Biting/
-    └── Non-BFRB/
+└── images/  
+    ├── Beard-Pulling/  
+    ├── Hair-Pulling/  
+    ├── Nail-Biting/  
+    └── Non-BFRB/  
 
 
 The code outputs training, testing, and validation splits. 60% of the original data goes toward training, 20% goes toward validation, and 20% goes toward testing.
