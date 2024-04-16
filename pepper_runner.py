@@ -30,7 +30,7 @@ class AuthenticatorFactory:
         return Authenticator(self.username, self.password)
 
 # Replace the URL with the IP of Pepper, get the ip from pressing the power button once
-app = qi.Application(sys.argv, url="tcps://10.0.0.4:9503")
+app = qi.Application(sys.argv, url="tcps://10.0.0.6:9503")
 logins = ("nao", "nao")
 factory = AuthenticatorFactory(*logins)
 app.session.setClientAuthenticatorFactory(factory)
@@ -67,7 +67,9 @@ while option == 'y':
 
     option = input('Would you like for pepper to perform a prediction? (y/n) ')
 
-    while True:
+    start_time = time.time()
+
+    while time.time() - start_time < 10:
 
         # Get a camera image.
         # image[6] contains the image data passed as an array of ASCII chars.
@@ -91,43 +93,54 @@ while option == 'y':
             prediction = model.predict(im_array)
             predicted_classes = np.argmax(prediction, axis=1)
 
-            if predicted_classes[0] != 3 and np.max(prediction) > 0.6:
-                behavior = classes[predicted_classes[0]]
-                tts = app.session.service("ALTextToSpeech")
+            if time.time() - start_time < 10:
 
-                print(prediction)
+                if predicted_classes[0] != 3 and np.max(prediction) > 0.6:
+                    behavior = classes[predicted_classes[0]]
+                    tts = app.session.service("ALTextToSpeech")
 
-                predictions_dict[behavior] += 1
+                    print(prediction)
 
-                if predictions_dict[behavior] > 2:
-                    if behavior == 'hair pulling':
-                        tts.say("You're your hair")
-                    elif behavior == 'beard pulling':
-                        tts.say("You're pulling your beard")
-                    elif behavior == 'nail bitting':
-                        tts.say("You're biting your nails")
-                    else:
-                        tts.say("you're fine")
-                    predictions_dict = {
+                    predictions_dict[behavior] += 1
+
+                    if predictions_dict[behavior] > 1:
+                        if behavior == 'hair pulling':
+                            tts.say("You are pulling your hair")
+                        elif behavior == 'beard pulling':
+                            tts.say("You are pulling your beard")
+                        elif behavior == 'nail bitting':
+                            tts.say("You are biting your nails")
+                        
+                        start_time = time.time()
+                        predictions_dict = {
+                            'beard pulling': 0,
+                            'hair pulling': 0,
+                            'nail bitting': 0,
+                            'non-bfrb': 0
+                        }
+                        
+                        break
+                else:
+                    print(classes[predicted_classes[0]])
+                    behavior = 'non-bfrb'
+            else:
+                print('%f second span passed' %(time.time()-start_time))
+                start_time = time.time()
+                predictions_dict = {
                         'beard pulling': 0,
                         'hair pulling': 0,
                         'nail bitting': 0,
                         'non-bfrb': 0
                     }
-                    
-                    break
-            else:
-                print(classes[predicted_classes[0]])
-                behavior = 'non-bfrb'
+                break
 
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)    
-        
-            out.write(frame)
-            end_time = time.time()
-            print("Current delay", end_time - start_time)
         else:
             print('image not received')
             behavior = 'non-bfrb'
+        
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)    
+        
+        out.write(frame)
         
 
 video_service.unsubscribe(videoClient)
