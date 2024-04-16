@@ -43,26 +43,26 @@ These are randomly assigned. After running the *data_cleaning.py* file, your dat
 
   dataset/
   │   
-  ├── images  
-      ├── Beard-Pulling  
-      ├── Hair-Pulling  
-      ├── Nail-Biting   
-      └── Non-BFRB
-  ├── test  
-      ├── Beard-Pulling  
-      ├── Hair-Pulling  
-      ├── Nail-Biting   
-      └── Non-BFRB
-  ├── train  
-      ├── Beard-Pulling  
-      ├── Hair-Pulling  
-      ├── Nail-Biting   
-      └── Non-BFRB
-  ├── validation  
-      ├── Beard-Pulling  
-      ├── Hair-Pulling  
-      ├── Nail-Biting   
-      └── Non-BFRB
+  ├── images    
+      ├── Beard-Pulling    
+      ├── Hair-Pulling    
+      ├── Nail-Biting     
+      └── Non-BFRB  
+  ├── test      
+      ├── Beard-Pulling    
+      ├── Hair-Pulling    
+      ├── Nail-Biting     
+      └── Non-BFRB  
+  ├── train      
+      ├── Beard-Pulling    
+      ├── Hair-Pulling    
+      ├── Nail-Biting     
+      └── Non-BFRB  
+  ├── validation      
+      ├── Beard-Pulling    
+      ├── Hair-Pulling    
+      ├── Nail-Biting     
+      └── Non-BFRB  
 
 ## Model Fitting
 This part of the project requires you to run *model_fitting.py*. This files showcases all the pre-trained CNN models we fine-tuned and experimented with for this project. The code for data augmentation and fine-tuning is in this file. For each model, how the training loss, training accuracy, validation loss, and validation accuracy changes over the training period is recorded is provided as a png file.  
