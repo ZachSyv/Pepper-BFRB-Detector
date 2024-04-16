@@ -35,7 +35,6 @@ logins = ("nao", "nao")
 factory = AuthenticatorFactory(*logins)
 app.session.setClientAuthenticatorFactory(factory)
 app.start()
-# print("started")
 
 #send camera information to local machine
 
@@ -45,13 +44,14 @@ colorSpace = 11   # RGB
 fps = 5
 
 videoClient = video_service.subscribeCamera("python_client", 0, resolution, colorSpace, fps)
+# start video recording (testing purposes only)
 fourcc = cv2.VideoWriter_fourcc(*'XVID')
 out = cv2.VideoWriter('output.avi', fourcc, fps, (640, 480))
 
 start_time = time.time()
-duration = 60  # seconds
 end_time = time.time()
 
+# counter for each prediction
 predictions_dict = {
     'beard pulling': 0,
     'hair pulling': 0,
@@ -74,35 +74,37 @@ while option == 'y':
         # Get a camera image.
         # image[6] contains the image data passed as an array of ASCII chars.
         naoImage = video_service.getImageRemote(videoClient)
-        # print(time.time()-end_time)
 
         if naoImage is not None:
-
+            # changing image to a usable structure
             imageWidth = naoImage[0]
             imageHeight = naoImage[1]
             array = naoImage[6]
             image_bytes = bytes(bytearray(array))
 
             frame = np.frombuffer(image_bytes, dtype=np.uint8).reshape(imageHeight, imageWidth, 3)
-
+            # Changing image to use as input for the model
             im = Image.fromarray(frame)
             im = im.resize((299, 299))
             im_array = np.array(im)
             im_array = im_array.astype('float32')/255.0
             im_array = np.expand_dims(im_array, axis = 0)
+            # performing prediction and extracting max prediction
             prediction = model.predict(im_array)
             predicted_classes = np.argmax(prediction, axis=1)
-
+            # additional time check to prevent going over 10s
             if time.time() - start_time < 10:
-
+                # check if behavior is not non-BFRB and confidence level is above 60%
                 if predicted_classes[0] != 3 and np.max(prediction) > 0.6:
+                    # translating prediction to behavior class
                     behavior = classes[predicted_classes[0]]
                     tts = app.session.service("ALTextToSpeech")
 
                     print(prediction)
 
+                    # increasing counter for one behavior
                     predictions_dict[behavior] += 1
-
+                    # only interact if behavior has been predicted more than once
                     if predictions_dict[behavior] > 1:
                         if behavior == 'hair pulling':
                             tts.say("You are pulling your hair")
@@ -110,7 +112,7 @@ while option == 'y':
                             tts.say("You are pulling your beard")
                         elif behavior == 'nail bitting':
                             tts.say("You are biting your nails")
-                        
+                        # resetting 10s timer
                         start_time = time.time()
                         predictions_dict = {
                             'beard pulling': 0,
@@ -121,9 +123,11 @@ while option == 'y':
                         
                         break
                 else:
+                    # debugging purposes
                     print(classes[predicted_classes[0]])
                     behavior = 'non-bfrb'
             else:
+                # warning that 10s time has passed, resetting time and counter
                 print('%f second span passed' %(time.time()-start_time))
                 start_time = time.time()
                 predictions_dict = {
@@ -137,12 +141,12 @@ while option == 'y':
         else:
             print('image not received')
             behavior = 'non-bfrb'
-        
+        # saving frame to video
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)    
         
         out.write(frame)
         
-
+# ending script
 video_service.unsubscribe(videoClient)
 out.release()
 
