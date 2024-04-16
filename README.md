@@ -10,9 +10,6 @@ main/
 ├── model_fitting.py  
 ├── model_testing.py   
 └── pepper_runner.py  
-Needs to be ran on Linux or a Linux VM. Ubuntu is the verified method.
-
-Python 3 is required
 
 ## Requirements:
 To run this code, you need to have access to a Linux based system or a Linux VM with Python 3 installed. In addition to that you need following python packages:
