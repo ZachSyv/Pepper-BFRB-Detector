@@ -1,3 +1,4 @@
 trained_nasNetLarge_model.keras
 trained_Xception_model.keras
+*.keras
 *.avi

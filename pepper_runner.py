@@ -1,4 +1,4 @@
-import qi # pip install qi is needed to import this library
+import qi
 import sys
 import time
 import os
@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 from keras.models import load_model
 
-model = load_model('trained_Xception_model.keras')
+model = load_model('trained_Xception_updated_model.keras')
 
 classes = ['beard pulling', 'hair pulling', 'nail bitting', 'non-bfrb']
 
@@ -30,14 +30,13 @@ class AuthenticatorFactory:
         return Authenticator(self.username, self.password)
 
 # Replace the URL with the IP of Pepper, get the ip from pressing the power button once
-app = qi.Application(sys.argv, url="tcps://10.0.0.6:9503")
+app = qi.Application(sys.argv, url="tcps://10.0.0.8:9503")
 logins = ("nao", "nao")
 factory = AuthenticatorFactory(*logins)
 app.session.setClientAuthenticatorFactory(factory)
 app.start()
 
 #send camera information to local machine
-
 video_service = app.session.service("ALVideoDevice")
 resolution = 2    # VGA
 colorSpace = 11   # RGB
@@ -45,8 +44,6 @@ fps = 5
 
 videoClient = video_service.subscribeCamera("python_client", 0, resolution, colorSpace, fps)
 # start video recording (testing purposes only)
-fourcc = cv2.VideoWriter_fourcc(*'XVID')
-out = cv2.VideoWriter('output.avi', fourcc, fps, (640, 480))
 
 start_time = time.time()
 end_time = time.time()
@@ -141,14 +138,9 @@ while option == 'y':
         else:
             print('image not received')
             behavior = 'non-bfrb'
-        # saving frame to video
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)    
-        
-        out.write(frame)
         
 # ending script
 video_service.unsubscribe(videoClient)
-out.release()
 
-print('finished recording')
+print('finished')
 
