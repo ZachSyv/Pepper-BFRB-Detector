@@ -1,4 +1,12 @@
 trained_nasNetLarge_model.keras
 trained_Xception_model.keras
 *.keras
+/BFRB data
 *.avi
+dataset*/
+models/
+classification*
+confusion*
+history/
+separated/
+merged/

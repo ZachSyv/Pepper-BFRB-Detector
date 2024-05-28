@@ -3,6 +3,9 @@ import shutil
 import random
 from sklearn.model_selection import LeaveOneGroupOut
 from collections import defaultdict
+from mtcnn.mtcnn import MTCNN
+from PIL import Image
+import numpy as np
 
 def create_datasets(data_dir, output_dir, merge_categories=False):
     merge_map = {'Beard-Pulling': 'Facial Hair-Pulling', 'Eyebrow-Pulling': 'Facial Hair-Pulling'} if merge_categories else {}
@@ -25,6 +28,19 @@ def create_datasets(data_dir, output_dir, merge_categories=False):
     for category in categories:
         collect_files(data_dir, category, category_files, category_group_indices, group_to_index, valid_groups, merge_map)
 
+    # Determine the minimum number of samples per category, except 'Non-BFRB'
+    min_samples = min(len(category_files[cat]) for cat in categories if cat != 'Non-BFRB')
+    non_bfrb_samples = int(1.25 * min_samples)
+
+    # Balance the dataset
+    for category in categories:
+        if category == 'Non-BFRB':
+            target_samples = non_bfrb_samples
+        else:
+            target_samples = min_samples
+
+        balance_category_data(category, category_files, category_group_indices, group_to_index, target_samples)
+
     valid_group_combinations = get_valid_group_combinations(group_labels, categories, category_group_indices, group_to_index)
 
     for fold, (test_group, val_groups) in enumerate(valid_group_combinations):
@@ -41,15 +57,39 @@ def create_datasets(data_dir, output_dir, merge_categories=False):
 
             setup_directories(fold, category, test_indices, val_indices, train_indices, image_files, groups, group_to_index, output_dir, index_to_group, test_group, val_group, group_labels)
 
+def balance_category_data(category, category_files, category_group_indices, group_to_index, target_samples):
+    files = category_files[category]
+    group_indices = category_group_indices[category]
+    group_count = defaultdict(int)
+
+    for index in group_indices:
+        group_count[index] += 1
+
+    # Calculate the maximum number of samples per group
+    max_samples_per_group = target_samples // len(group_count)
+
+    new_files = []
+    new_group_indices = []
+    actual_group_count = defaultdict(int)
+
+    for file, group_index in zip(files, group_indices):
+        if actual_group_count[group_index] < max_samples_per_group:
+            new_files.append(file)
+            new_group_indices.append(group_index)
+            actual_group_count[group_index] += 1
+
+    category_files[category] = new_files
+    category_group_indices[category] = new_group_indices
+
 def collect_files(data_dir, category, category_files, category_group_indices, group_to_index, valid_groups, merge_map):
     for group in valid_groups:
         for cat in merge_map:
             if category == cat or category == merge_map[cat]:
-                actual_category = merge_map.get(cat, cat) 
+                actual_category = merge_map.get(cat, cat)
                 category_path = os.path.join(data_dir, cat, group)
                 if os.path.isdir(category_path):
                     for file in os.listdir(category_path):
-                        if file.endswith(('.jpg', '.jpeg', '.png')):
+                        if file.startswith('cropped_') and file.endswith(('.jpg', '.jpeg', '.png')):
                             full_path = os.path.join(category_path, file)
                             category_files[actual_category].append(full_path)
                             category_group_indices[actual_category].append(group_to_index[group])
@@ -57,7 +97,7 @@ def collect_files(data_dir, category, category_files, category_group_indices, gr
             category_path = os.path.join(data_dir, category, group)
             if os.path.isdir(category_path):
                 for file in os.listdir(category_path):
-                    if file.endswith(('.jpg', '.jpeg', '.png')):
+                    if file.startswith('cropped_') and file.endswith(('.jpg', '.jpeg', '.png')):
                         full_path = os.path.join(category_path, file)
                         category_files[category].append(full_path)
                         category_group_indices[category].append(group_to_index[group])
@@ -65,7 +105,12 @@ def collect_files(data_dir, category, category_files, category_group_indices, gr
 def select_valid_group(groups, category, category_group_indices, group_to_index):
     valid_groups = [group for group in groups if group_to_index[group] in category_group_indices[category]]
     random.shuffle(valid_groups)
-    return valid_groups[0] if valid_groups else None
+    while valid_groups:
+        candidate = valid_groups.pop(0)
+        if category_group_indices[category].count(group_to_index[candidate]) > 0:
+            return candidate
+    return None
+
 
 def get_valid_group_combinations(group_labels, categories, category_group_indices, group_to_index):
     valid_combinations = []
@@ -77,7 +122,7 @@ def get_valid_group_combinations(group_labels, categories, category_group_indice
         valid_remaining_groups = []
         for g in remaining_groups:
             group_index = group_to_index[g]
-            if all(group_index in category_group_indices[cat] for cat in test_categories):
+            if any(group_index in category_group_indices[cat] for cat in test_categories):  # Changed from 'all' to 'any'
                 valid_remaining_groups.append(g)
 
         random.shuffle(valid_remaining_groups)
@@ -86,8 +131,9 @@ def get_valid_group_combinations(group_labels, categories, category_group_indice
     return valid_combinations
 
 
+
 def setup_directories(fold, category, test_indices, val_indices, train_indices, image_files, groups, group_to_index, output_dir, index_to_group, test_group, val_group, group_labels):
-    fold_dir_name = f"fold_{fold+1}_test_{test_group}_val_{val_group}"
+    fold_dir_name = f"fold_{fold+1}"
     fold_output_dir = os.path.join(output_dir, fold_dir_name)
     if not os.path.exists(fold_output_dir):
         os.makedirs(fold_output_dir, exist_ok=True)
@@ -108,8 +154,9 @@ def consolidate_and_rename_folds(src_base_dir, dst_base_dir):
 
     for folder_name in os.listdir(src_base_dir):
         parts = folder_name.split('_')
-        fold_prefix = parts[0] + '_' + parts[1] 
-        folds[fold_prefix].append(os.path.join(src_base_dir, folder_name))
+        fold_prefix = parts[0] + '_' + parts[1]
+        if fold_prefix.startswith('fold'):
+            folds[fold_prefix].append(os.path.join(src_base_dir, folder_name))
 
     sorted_fold_prefixes = sorted(folds.keys(), key=lambda x: int(x.split('_')[1]))
 
@@ -133,6 +180,42 @@ def consolidate_and_rename_folds(src_base_dir, dst_base_dir):
                             dst_file = os.path.join(category_dst_dir, file)
                             shutil.copy(src_file, dst_file)
 
+def detect_and_crop_face(image_path, width_margin=0.6, height_margin=0.6):
+    image = Image.open(image_path)
+    image_array = np.array(image)
+
+    detector = MTCNN()
+    results = detector.detect_faces(image_array)
+    if results:
+        x1, y1, width, height = results[0]['box']
+        x2, y2 = x1 + width, y1 + height
+
+        # Increase the bounding box by specified margins
+        delta_width = width * width_margin
+        delta_height = height * height_margin
+        x1 = max(0, int(x1 - delta_width))
+        y1 = max(0, int(y1 - delta_height))
+        x2 = min(image_array.shape[1], int(x2 + delta_width))
+        y2 = min(image_array.shape[0], int(y2 + delta_height))
+
+        cropped_image = image.crop((x1, y1, x2, y2))
+        return cropped_image
+    return image
+
+def crop_and_save_images(data_dir):
+    for root, dirs, files in os.walk(data_dir):
+        for file in files:
+            if file.endswith(('.jpg', '.jpeg', '.png')) and not file.startswith('cropped_'):
+                full_path = os.path.join(root, file)
+                try:
+                    processed_image = detect_and_crop_face(full_path)
+                    cropped_path = os.path.join(root, f"cropped_{file}")
+                    processed_image.save(cropped_path)
+                    # Optionally, verify the image can be opened
+                    # Image.open(cropped_path)
+                except Exception as e:
+                    print(f"Error processing file {full_path}: {e}")
+
 if __name__ == '__main__':
-    create_datasets('./BFRB data', './dataset_merged', merge_categories=True)
-    consolidate_and_rename_folds('./dataset_merged', './merged')
+    crop_and_save_images('./BFRB data/BFRB data')
+    create_datasets('./BFRB data/BFRB data', './dataset_separated', merge_categories=False)
