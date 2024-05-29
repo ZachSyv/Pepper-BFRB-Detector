@@ -1,7 +1,7 @@
 import os
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.layers import Input, Flatten, Dense, Dropout
+from tensorflow.keras.layers import Input, Flatten, Dense, Dropout, Conv2D, GlobalAveragePooling2D
 from tensorflow.keras.models import Model
 from collections import defaultdict
 import json
@@ -13,9 +13,12 @@ def setup_model(model_name, input_shape, num_categories):
 
     input_tensor = Input(shape=input_shape)
     x = base_model(input_tensor)
-    x = Flatten()(x)
-    x = Dense(256, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)  # Added L2 regularization
-    x = Dropout(0.50)(x) 
+    x = Conv2D(filters=64, kernel_size=(3, 3), activation='relu')(x)
+    x = GlobalAveragePooling2D()(x)
+    x = Dense(512, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = Dropout(0.5)(x)
+    x = Dense(256, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = Dropout(0.5)(x)
     output_tensor = Dense(num_categories, activation='softmax')(x)
     model = Model(inputs=input_tensor, outputs=output_tensor)
 
@@ -68,13 +71,13 @@ def train_across_folds(base_dir, model_config, epochs):
     folds = get_fold_directories(base_dir)
     for fold, directories in folds.items():
         print(f"Processing {model_config['model_name']} for Fold: {fold}")
-        if(fold == 'fold_5' or fold == 'fold_3'):
-          for sub_directory in directories:
-              train_dir = os.path.join(base_dir, sub_directory, 'train')
-              val_dir = os.path.join(base_dir, sub_directory, 'validation')
-              train_generator, validation_generator = get_data_generators(train_dir, val_dir, model_config['input_size'][:2])
-              model = setup_model(model_config['model_name'], model_config['input_size'], len(os.listdir(train_dir)))
-              train_and_save_model(model, train_generator, validation_generator, epochs, fold, model_config['model_name'], base_dir)
+        
+        for sub_directory in directories:
+            train_dir = os.path.join(base_dir, sub_directory, 'train')
+            val_dir = os.path.join(base_dir, sub_directory, 'validation')
+            train_generator, validation_generator = get_data_generators(train_dir, val_dir, model_config['input_size'][:2])
+            model = setup_model(model_config['model_name'], model_config['input_size'], len(os.listdir(train_dir)))
+            train_and_save_model(model, train_generator, validation_generator, epochs, fold, model_config['model_name'], base_dir)
 
 
 if __name__ == '__main__':    
@@ -89,6 +92,7 @@ if __name__ == '__main__':
             # {'model_name': 'EfficientNetV2S', 'input_size': (300, 300, 3)}, 
             # {'model_name': 'NASNetLarge', 'input_size': (331, 331, 3)}
         ]
+
         epochs = 15
 
         for model_config in model_configs:

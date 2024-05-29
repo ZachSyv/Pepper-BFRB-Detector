@@ -7,9 +7,9 @@ from mtcnn.mtcnn import MTCNN
 from PIL import Image
 import numpy as np
 
-def create_datasets(data_dir, output_dir, merge_categories=False):
+def create_datasets(data_dir, output_dir, merge_categories=False,  max_samples_per_category=400):
     merge_map = {'Beard-Pulling': 'Facial Hair-Pulling', 'Eyebrow-Pulling': 'Facial Hair-Pulling'} if merge_categories else {}
-    categories = ['Hair-Pulling', 'Nail-Biting', 'Non-BFRB', 'Facial Hair-Pulling'] if merge_categories else ['Hair-Pulling', 'Nail-Biting', 'Non-BFRB', 'Eyebrow-Pulling', 'Beard-Pulling']
+    categories = ['Hair-Pulling', 'Nail-Biting', 'Non-BFRB', 'Facial Hair-Pulling'] if merge_categories else ['Hair-Pulling', 'Nail-Biting', 'Non-BFRB', 'Beard-Pulling', 'Eyebrow-Pulling']
 
     valid_groups = set()
     for root, dirs, files in os.walk(data_dir):
@@ -30,7 +30,7 @@ def create_datasets(data_dir, output_dir, merge_categories=False):
         collect_files(data_dir, category, category_files, category_group_indices, group_to_index, valid_groups, merge_map)
 
     min_samples = min(len(category_files[cat]) for cat in categories if cat != 'Non-BFRB')
-    non_bfrb_samples = int(1.25 * min_samples)
+    non_bfrb_samples = int(2 * min_samples) 
 
     for category in categories:
         if category == 'Non-BFRB':
@@ -38,8 +38,7 @@ def create_datasets(data_dir, output_dir, merge_categories=False):
         else:
             target_samples = min_samples
 
-        balance_category_data(category, category_files, category_group_indices, group_to_index, target_samples)
-
+        balance_category_data(category, category_files, category_group_indices, group_to_index, target_samples, max_samples_per_category)
     valid_group_combinations = get_valid_group_combinations(group_labels, categories, category_group_indices, group_to_index)
 
     for fold, (test_group, val_groups) in enumerate(valid_group_combinations):
@@ -56,29 +55,36 @@ def create_datasets(data_dir, output_dir, merge_categories=False):
 
             setup_directories(fold, category, test_indices, val_indices, train_indices, image_files, groups, group_to_index, output_dir, index_to_group, test_group, val_group, group_labels)
 
-def balance_category_data(category, category_files, category_group_indices, group_to_index, target_samples):
+def balance_category_data(category, category_files, category_group_indices, group_to_index, target_samples, is_non_bfrb=False):
     files = category_files[category]
     group_indices = category_group_indices[category]
     group_count = defaultdict(int)
-    # print(category_group_indices)
+
     for index in group_indices:
         group_count[index] += 1
-    # print(category)
-    # print(group_count)
-    max_samples_per_group = target_samples // len(group_count)
+
+    total_available_samples = sum(group_count.values())
+    if is_non_bfrb:
+        desired_samples_per_group = 2 * (target_samples // len(group_count))
+    else:
+        desired_samples_per_group = target_samples // len(group_count)
 
     new_files = []
     new_group_indices = []
     actual_group_count = defaultdict(int)
 
-    for file, group_index in zip(files, group_indices):
-        if actual_group_count[group_index] < max_samples_per_group:
+    combined_list = list(zip(files, group_indices))
+    random.shuffle(combined_list)
+
+    for file, group_index in combined_list:
+        if actual_group_count[group_index] < desired_samples_per_group:
             new_files.append(file)
             new_group_indices.append(group_index)
             actual_group_count[group_index] += 1
 
     category_files[category] = new_files
     category_group_indices[category] = new_group_indices
+
 
 def collect_files(data_dir, category, category_files, category_group_indices, group_to_index, valid_groups, merge_map):
     for group in valid_groups:
@@ -173,16 +179,15 @@ def detect_and_crop_face(image_path, width_margin=0.6, height_margin=0.6):
 def crop_and_save_images(data_dir):
 
     for root, dirs, files in os.walk(data_dir):
-        if 'Non-BFRB' in root:
-            for file in files:
-                if file.endswith(('.jpg', '.jpeg', '.png')) and not file.startswith('cropped_'):
-                    full_path = os.path.join(root, file)
-                    try:
-                        processed_image = detect_and_crop_face(full_path, width_margin=1.5, height_margin=1.5)
-                        cropped_path = os.path.join(root, f"cropped_{file}")
-                        processed_image.save(cropped_path)
-                    except Exception as e:
-                        print(f"Error processing file {full_path}: {e}")
+        for file in files:
+            if file.endswith(('.jpg', '.jpeg', '.png')) and not file.startswith('cropped_'):
+                full_path = os.path.join(root, file)
+                try:
+                    processed_image = detect_and_crop_face(full_path, width_margin=1.5, height_margin=1.5)
+                    cropped_path = os.path.join(root, f"cropped_{file}")
+                    processed_image.save(cropped_path)
+                except Exception as e:
+                    print(f"Error processing file {full_path}: {e}")
 
 if __name__ == '__main__':
     # crop_and_save_images('./BFRB data/BFRB data')

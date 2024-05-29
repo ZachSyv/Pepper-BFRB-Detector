@@ -16,13 +16,13 @@ if __name__ == '__main__':
     folds = [f for f in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, f))]
     print(folds)
     model_configs = [
-            # {'model_name': 'VGG16', 'input_size': (224, 224, 3)},
-            # {'model_name': 'VGG19', 'input_size': (224, 224, 3)},
+            {'model_name': 'VGG16', 'input_size': (224, 224, 3)},
+            {'model_name': 'VGG19', 'input_size': (224, 224, 3)},
             {'model_name': 'Xception', 'input_size': (299, 299, 3)},
-            # {'model_name': 'ResNet50', 'input_size': (224, 224, 3)},
-            # {'model_name': 'InceptionResNetV2', 'input_size': (299, 299, 3)},
-            # {'model_name': 'EfficientNetV2S', 'input_size': (300, 300, 3)}, 
-            # {'model_name': 'NASNetLarge', 'input_size': (331, 331, 3)}
+            {'model_name': 'ResNet50', 'input_size': (224, 224, 3)},
+            {'model_name': 'InceptionResNetV2', 'input_size': (299, 299, 3)},
+            {'model_name': 'EfficientNetV2S', 'input_size': (300, 300, 3)}, 
+            {'model_name': 'NASNetLarge', 'input_size': (331, 331, 3)}
         ]
     for model_path in model_files:
         modelfile_name = os.path.basename(model_path).replace('.keras', '')
