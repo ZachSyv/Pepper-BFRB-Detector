@@ -68,7 +68,7 @@ def train_across_folds(base_dir, model_config, epochs):
     folds = get_fold_directories(base_dir)
     for fold, directories in folds.items():
         print(f"Processing {model_config['model_name']} for Fold: {fold}")
-        if(fold != 'fold_5'):
+        if(fold == 'fold_5' or fold == 'fold_3'):
           for sub_directory in directories:
               train_dir = os.path.join(base_dir, sub_directory, 'train')
               val_dir = os.path.join(base_dir, sub_directory, 'validation')
@@ -78,16 +78,16 @@ def train_across_folds(base_dir, model_config, epochs):
 
 
 if __name__ == '__main__':    
-    base_dirs = ['./separated']
+    base_dirs = ['./dataset_separated']
     for base_dir in base_dirs:
         model_configs = [
             # {'model_name': 'VGG16', 'input_size': (224, 224, 3)},
-            {'model_name': 'VGG19', 'input_size': (224, 224, 3)},
+            # {'model_name': 'VGG19', 'input_size': (224, 224, 3)},
             {'model_name': 'Xception', 'input_size': (299, 299, 3)},
-            {'model_name': 'ResNet50', 'input_size': (224, 224, 3)},
-            {'model_name': 'InceptionResNetV2', 'input_size': (299, 299, 3)},
-            {'model_name': 'EfficientNetV2S', 'input_size': (300, 300, 3)}, 
-            {'model_name': 'NASNetLarge', 'input_size': (331, 331, 3)}
+            # {'model_name': 'ResNet50', 'input_size': (224, 224, 3)},
+            # {'model_name': 'InceptionResNetV2', 'input_size': (299, 299, 3)},
+            # {'model_name': 'EfficientNetV2S', 'input_size': (300, 300, 3)}, 
+            # {'model_name': 'NASNetLarge', 'input_size': (331, 331, 3)}
         ]
         epochs = 15
 

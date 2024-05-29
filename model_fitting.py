@@ -2,7 +2,7 @@
 
 # importing the required libraries
 import tensorflow as tf
-from keras.src.legacy.preprocessing.image import ImageDataGenerator
+from keras.preprocessing.image import ImageDataGenerator
 import matplotlib.pyplot as plt
 import os
 from keras import models, layers, optimizers

@@ -24,15 +24,14 @@ def create_datasets(data_dir, output_dir, merge_categories=False):
 
     category_files = {category: [] for category in categories}
     category_group_indices = {category: [] for category in categories}
-
+    
     for category in categories:
+        print(category)
         collect_files(data_dir, category, category_files, category_group_indices, group_to_index, valid_groups, merge_map)
 
-    # Determine the minimum number of samples per category, except 'Non-BFRB'
     min_samples = min(len(category_files[cat]) for cat in categories if cat != 'Non-BFRB')
     non_bfrb_samples = int(1.25 * min_samples)
 
-    # Balance the dataset
     for category in categories:
         if category == 'Non-BFRB':
             target_samples = non_bfrb_samples
@@ -61,11 +60,11 @@ def balance_category_data(category, category_files, category_group_indices, grou
     files = category_files[category]
     group_indices = category_group_indices[category]
     group_count = defaultdict(int)
-
+    # print(category_group_indices)
     for index in group_indices:
         group_count[index] += 1
-
-    # Calculate the maximum number of samples per group
+    # print(category)
+    # print(group_count)
     max_samples_per_group = target_samples // len(group_count)
 
     new_files = []
@@ -88,8 +87,9 @@ def collect_files(data_dir, category, category_files, category_group_indices, gr
                 actual_category = merge_map.get(cat, cat)
                 category_path = os.path.join(data_dir, cat, group)
                 if os.path.isdir(category_path):
+                    print(category_path)
                     for file in os.listdir(category_path):
-                        if file.startswith('cropped_') and file.endswith(('.jpg', '.jpeg', '.png')):
+                        if not file.startswith('cropped_') and file.endswith(('.jpg', '.jpeg', '.png')):
                             full_path = os.path.join(category_path, file)
                             category_files[actual_category].append(full_path)
                             category_group_indices[actual_category].append(group_to_index[group])
@@ -97,7 +97,7 @@ def collect_files(data_dir, category, category_files, category_group_indices, gr
             category_path = os.path.join(data_dir, category, group)
             if os.path.isdir(category_path):
                 for file in os.listdir(category_path):
-                    if file.startswith('cropped_') and file.endswith(('.jpg', '.jpeg', '.png')):
+                    if not file.startswith('cropped_') and file.endswith(('.jpg', '.jpeg', '.png')):
                         full_path = os.path.join(category_path, file)
                         category_files[category].append(full_path)
                         category_group_indices[category].append(group_to_index[group])
@@ -149,37 +149,6 @@ def setup_directories(fold, category, test_indices, val_indices, train_indices, 
 
     print(f"Category: {category}, Fold {fold+1}: Test on {test_group}, Validate on {val_group}")
 
-def consolidate_and_rename_folds(src_base_dir, dst_base_dir):
-    folds = defaultdict(list)
-
-    for folder_name in os.listdir(src_base_dir):
-        parts = folder_name.split('_')
-        fold_prefix = parts[0] + '_' + parts[1]
-        if fold_prefix.startswith('fold'):
-            folds[fold_prefix].append(os.path.join(src_base_dir, folder_name))
-
-    sorted_fold_prefixes = sorted(folds.keys(), key=lambda x: int(x.split('_')[1]))
-
-    for new_index, fold_prefix in enumerate(sorted_fold_prefixes, start=1):
-        fold_dst_dir = os.path.join(dst_base_dir, f"fold_{new_index}")
-        os.makedirs(fold_dst_dir, exist_ok=True)
-
-        for dtype in ['train', 'validation', 'test']:
-            dtype_dst_dir = os.path.join(fold_dst_dir, dtype)
-            os.makedirs(dtype_dst_dir, exist_ok=True)
-
-            for directory in folds[fold_prefix]:
-                dtype_src_dir = os.path.join(directory, dtype)
-                if os.path.exists(dtype_src_dir):
-                    for category in os.listdir(dtype_src_dir):
-                        category_dst_dir = os.path.join(dtype_dst_dir, category)
-                        os.makedirs(category_dst_dir, exist_ok=True)
-
-                        for file in os.listdir(os.path.join(dtype_src_dir, category)):
-                            src_file = os.path.join(dtype_src_dir, category, file)
-                            dst_file = os.path.join(category_dst_dir, file)
-                            shutil.copy(src_file, dst_file)
-
 def detect_and_crop_face(image_path, width_margin=0.6, height_margin=0.6):
     image = Image.open(image_path)
     image_array = np.array(image)
@@ -190,7 +159,6 @@ def detect_and_crop_face(image_path, width_margin=0.6, height_margin=0.6):
         x1, y1, width, height = results[0]['box']
         x2, y2 = x1 + width, y1 + height
 
-        # Increase the bounding box by specified margins
         delta_width = width * width_margin
         delta_height = height * height_margin
         x1 = max(0, int(x1 - delta_width))
@@ -203,19 +171,19 @@ def detect_and_crop_face(image_path, width_margin=0.6, height_margin=0.6):
     return image
 
 def crop_and_save_images(data_dir):
+
     for root, dirs, files in os.walk(data_dir):
-        for file in files:
-            if file.endswith(('.jpg', '.jpeg', '.png')) and not file.startswith('cropped_'):
-                full_path = os.path.join(root, file)
-                try:
-                    processed_image = detect_and_crop_face(full_path)
-                    cropped_path = os.path.join(root, f"cropped_{file}")
-                    processed_image.save(cropped_path)
-                    # Optionally, verify the image can be opened
-                    # Image.open(cropped_path)
-                except Exception as e:
-                    print(f"Error processing file {full_path}: {e}")
+        if 'Non-BFRB' in root:
+            for file in files:
+                if file.endswith(('.jpg', '.jpeg', '.png')) and not file.startswith('cropped_'):
+                    full_path = os.path.join(root, file)
+                    try:
+                        processed_image = detect_and_crop_face(full_path, width_margin=1.5, height_margin=1.5)
+                        cropped_path = os.path.join(root, f"cropped_{file}")
+                        processed_image.save(cropped_path)
+                    except Exception as e:
+                        print(f"Error processing file {full_path}: {e}")
 
 if __name__ == '__main__':
-    crop_and_save_images('./BFRB data/BFRB data')
+    # crop_and_save_images('./BFRB data/BFRB data')
     create_datasets('./BFRB data/BFRB data', './dataset_separated', merge_categories=False)
