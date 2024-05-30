@@ -5,7 +5,7 @@ import numpy as np
 from tensorflow.keras.models import load_model
 from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QComboBox
 from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt 
 
 class WebcamGUI(QWidget):
     def __init__(self):
@@ -49,7 +49,7 @@ class WebcamGUI(QWidget):
             self.current_model_name = self.extract_model_name(self.model_selector.currentText())
 
     def extract_model_name(self, model_path):
-        return os.path.basename(model_path).split('_')[0]  # Assumes format "ModelName.h5"
+        return os.path.basename(model_path).split('_')[0] 
 
     def load_model_config(self):
         return [
@@ -74,7 +74,6 @@ class WebcamGUI(QWidget):
             self.image_label.setText("Failed to capture image")
 
     def predict_behavior(self, image):
-        # Get the correct input size for the current model
         input_size = next((config['input_size'] for config in self.model_config if config['model_name'] == self.current_model_name), (224, 224, 3))
         image = cv2.resize(image, input_size[:2])
         image = np.expand_dims(image, axis=0)

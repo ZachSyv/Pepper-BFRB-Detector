@@ -1,7 +1,7 @@
 import os
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.layers import Input, Flatten, Dense, Dropout, Conv2D, GlobalAveragePooling2D
+from tensorflow.keras.layers import Input, Flatten, Dense, Dropout, Conv2D, GlobalAveragePooling2D, MaxPooling2D
 from tensorflow.keras.models import Model
 from collections import defaultdict
 import json
@@ -13,13 +13,15 @@ def setup_model(model_name, input_shape, num_categories):
 
     input_tensor = Input(shape=input_shape)
     x = base_model(input_tensor)
-    x = Conv2D(filters=64, kernel_size=(3, 3), activation='relu')(x)
+    x = Conv2D(filters=256, kernel_size=(3, 3), activation='relu', padding='same')(x)
+    x = MaxPooling2D(2, 2)(x)
+    x = Conv2D(filters=128, kernel_size=(3, 3), activation='relu', padding='same')(x)
+
+    x = MaxPooling2D(2, 2)(x)
+    x = Conv2D(filters=64, kernel_size=(3, 3), activation='relu', padding='same')(x)
     x = GlobalAveragePooling2D()(x)
-    x = Dense(512, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
-    x = Dropout(0.5)(x)
-    x = Dense(256, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
-    x = Dropout(0.5)(x)
     output_tensor = Dense(num_categories, activation='softmax')(x)
+
     model = Model(inputs=input_tensor, outputs=output_tensor)
 
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
