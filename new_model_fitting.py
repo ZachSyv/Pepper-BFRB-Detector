@@ -14,9 +14,10 @@ def setup_model(model_name, input_shape, num_categories):
     input_tensor = Input(shape=input_shape)
     x = base_model(input_tensor)
     x = Conv2D(filters=256, kernel_size=(3, 3), activation='relu', padding='same')(x)
+    x = Dropout(0.25)(x)
     x = MaxPooling2D(2, 2)(x)
     x = Conv2D(filters=128, kernel_size=(3, 3), activation='relu', padding='same')(x)
-
+    x = Dropout(0.25)(x)
     x = MaxPooling2D(2, 2)(x)
     x = Conv2D(filters=64, kernel_size=(3, 3), activation='relu', padding='same')(x)
     x = GlobalAveragePooling2D()(x)

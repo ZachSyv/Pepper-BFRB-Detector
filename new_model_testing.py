@@ -24,6 +24,9 @@ if __name__ == '__main__':
             {'model_name': 'EfficientNetV2S', 'input_size': (300, 300, 3)}, 
             {'model_name': 'NASNetLarge', 'input_size': (331, 331, 3)}
         ]
+    
+    fixed_categories = ['Hair-Pulling', 'Nail-Biting', 'Non-BFRB', 'Beard-Pulling', 'Eyebrow-Pulling']
+    
     for model_path in model_files:
         modelfile_name = os.path.basename(model_path).replace('.keras', '')
         model_name = modelfile_name.split('_')[0]
@@ -48,7 +51,26 @@ if __name__ == '__main__':
 
         true_classes = test_generator.classes
         class_labels = list(test_generator.class_indices.keys())
-        report = classification_report(true_classes, predicted_classes, target_names=class_labels)
+        
+        print("True classes:", true_classes)
+        print("Predicted classes:", predicted_classes)
+        print("Class labels:", class_labels)
+        
+        for category in fixed_categories:
+            if category not in class_labels:
+                class_labels.append(category)
+        
+        label_to_index = {label: index for index, label in enumerate(class_labels)}
+        
+        print("Label to index mapping:", label_to_index)
+        
+        true_classes_mapped = [label_to_index[class_labels[label]] for label in true_classes]
+        predicted_classes_mapped = [label_to_index[class_labels[label]] for label in predicted_classes]
+        
+        print("Mapped true classes:", true_classes_mapped)
+        print("Mapped predicted classes:", predicted_classes_mapped)
+        
+        report = classification_report(true_classes_mapped, predicted_classes_mapped, target_names=class_labels, labels=range(len(class_labels)))
 
         fig, ax = plt.subplots(figsize=(6, 4))
         ax.text(0.5, 0.5, report, horizontalalignment='center', verticalalignment='center',
@@ -57,7 +79,7 @@ if __name__ == '__main__':
         plt.title(f'Classification Report for {modelfile_name}')
         plt.savefig(f'classification_report_{modelfile_name}.png', dpi=300, bbox_inches='tight')
 
-        cm = confusion_matrix(true_classes, predicted_classes)
+        cm = confusion_matrix(true_classes_mapped, predicted_classes_mapped, labels=range(len(class_labels)))
         cm_display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_labels)
         fig, ax = plt.subplots(figsize=(10, 10))
         cm_display.plot(ax=ax, cmap=plt.cm.Blues, xticks_rotation='vertical')
