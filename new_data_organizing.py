@@ -1,117 +1,60 @@
 import os
 import shutil
-import random
-from sklearn.model_selection import LeaveOneGroupOut
-from collections import defaultdict
+from random import seed, sample
 
-def create_datasets(data_dir, output_dir, max_samples_per_category=400):
-    categories = ['Hair-Pulling', 'Nail-Biting', 'Non-BFRB', 'Beard-Pulling', 'Eyebrow-Pulling']
-    valid_groups = set()
+seed(42)
 
-    for root, dirs, files in os.walk(data_dir):
-        valid_groups.update([d for d in dirs if not d.startswith('.')])
+def create_directories(base_path, categories):
+    for i in range(9):
+        for subset in ['train', 'test', 'validation']:
+            for category in categories:
+                dir_path = os.path.join(base_path, f'fold_{i+1}', subset, category)
+                os.makedirs(dir_path, exist_ok=True)
+                print(f"Created directory: {dir_path}")
 
-    group_to_index = {group: i for i, group in enumerate(sorted(valid_groups))}
-    category_files = {category: [] for category in categories}
-    category_group_indices = {category: [] for category in categories}
-    
-    for category in categories:
-        collect_files(data_dir, category, category_files, category_group_indices, group_to_index, valid_groups)
+def distribute_files(source_path, base_path):
+    categories = [cat for cat in os.listdir(source_path) if os.path.isdir(os.path.join(source_path, cat))]
 
-    min_samples = min(len(category_files[cat]) for cat in categories if cat != 'Non-BFRB')
-    non_bfrb_samples = int(2 * min_samples)
+    create_directories(base_path, categories)
 
-    for category in categories:
-        target_samples = non_bfrb_samples if category == 'Non-BFRB' else min_samples
-        balance_category_data(category, category_files, category_group_indices, group_to_index, target_samples, max_samples_per_category)
+    for i, category in enumerate(categories):
+        category_path = os.path.join(source_path, category)
+        person_ids = sorted([d for d in os.listdir(category_path) if os.path.isdir(os.path.join(category_path, d))])
+        for j, test_person in enumerate(person_ids):
+            print(f"Processing fold for test person: {test_person} in category: {category}")
+            # Setup paths for train, test, validation
+            train_persons = [p for p in person_ids if p != test_person]
 
-    valid_group_combinations = get_valid_group_combinations(categories, category_group_indices, group_to_index)
+            # distribute test data
+            test_source_folder = os.path.join(category_path, test_person)
+            distribute_files_to_set(test_source_folder, os.path.join(base_path, f'fold_{j+1}', 'test', category), test_person)
 
-    for fold, (test_group, remaining_groups) in enumerate(valid_group_combinations):
-        setup_fold(fold, test_group, remaining_groups, category_files, category_group_indices, group_to_index, output_dir, categories)
+            # get train data
+            for train_person in train_persons:
+                train_source_folder = os.path.join(category_path, train_person)
+                distribute_files_to_set(train_source_folder, os.path.join(base_path, f'fold_{j+1}', 'train', category), train_person)
 
-def collect_files(data_dir, category, category_files, category_group_indices, group_to_index, valid_groups):
-    for group in valid_groups:
-        category_path = os.path.join(data_dir, category, group)
-        if os.path.isdir(category_path):
-            for file in os.listdir(category_path):
-                if file.endswith(('.jpg', '.jpeg', '.png')) and not file.startswith('cropped_'):
-                    full_path = os.path.join(category_path, file)
-                    category_files[category].append(full_path)
-                    category_group_indices[category].append(group_to_index[group])
+            # Create validation set by sampling from train set
+            train_set_path = os.path.join(base_path, f'fold_{j+1}', 'train', category)
+            all_files = [os.path.join(train_set_path, f) for f in os.listdir(train_set_path)
+                         if os.path.isfile(os.path.join(train_set_path, f)) and
+                         f.lower().endswith(('.png', '.jpg', '.jpeg')) and not f.startswith('cropped_')]
+            if all_files:
+                sample_size = min(len(all_files) // 6, len(all_files))
+                validation_files = sample(all_files, sample_size) if sample_size > 0 else []
+                for file_path in validation_files:
+                    new_filename = f"{os.path.basename(file_path).split('.')[0]}_{os.path.basename(train_set_path)}.{'.'.join(os.path.basename(file_path).split('.')[1:])}"
+                    shutil.move(file_path, os.path.join(base_path, f'fold_{j+1}', 'validation', category, new_filename))
 
-def balance_category_data(category, category_files, category_group_indices, group_to_index, target_samples, max_samples_per_category):
-    files = category_files[category]
-    group_indices = category_group_indices[category]
-    group_count = defaultdict(int)
+def distribute_files_to_set(source_folder, dest_base_path, person_id):
+    print(f"Copying files from {source_folder}")
+    for file in os.listdir(source_folder):
+        file_path = os.path.join(source_folder, file)
+        if os.path.isfile(file_path) and file.lower().endswith(('.png', '.jpg', '.jpeg')) and not file.startswith('cropped_'):
+            new_filename = f"{person_id}_{file}"
+            shutil.copy(file_path, os.path.join(dest_base_path, new_filename))
 
-    for index in group_indices:
-        group_count[index] += 1
-
-    desired_samples_per_group = target_samples // len(group_count)
-    new_files, new_group_indices = [], []
-    combined_list = list(zip(files, group_indices))
-    random.shuffle(combined_list)
-
-    for file, group_index in combined_list:
-        if len(new_files) < max_samples_per_category and group_count[group_index] > 0:
-            new_files.append(file)
-            new_group_indices.append(group_index)
-            group_count[group_index] -= 1
-
-    category_files[category] = new_files
-    category_group_indices[category] = new_group_indices
-
-def get_valid_group_combinations(categories, category_group_indices, group_to_index):
-    valid_combinations = []
-    for group, index in group_to_index.items():
-        other_groups = [g for g, idx in group_to_index.items() if idx != index]
-        if any(index in category_group_indices[cat] for cat in categories):
-            valid_combinations.append((group, other_groups))
-    return valid_combinations
-
-def setup_fold(fold, test_group, remaining_groups, category_files, category_group_indices, group_to_index, output_dir, categories):
-    fold_dir_name = f"fold_{fold+1}"
-    fold_output_dir = os.path.join(output_dir, fold_dir_name)
-    os.makedirs(fold_output_dir, exist_ok=True)
-
-    test_indices, train_indices = [], []
-    for category in categories:
-        image_files = category_files[category]
-        groups = category_group_indices[category]
-        category_test_indices = [i for i, g in enumerate(groups) if g == group_to_index[test_group]]
-        category_train_indices = [i for i in range(len(groups)) if groups[i] != group_to_index[test_group]]
-
-        distribute_files(fold_output_dir, category, image_files, category_test_indices, category_train_indices)
-
-def distribute_files(fold_output_dir, category, image_files, test_indices, train_indices):
-    random.shuffle(train_indices)
-    num_val_samples = len(train_indices) // 6
-    val_indices = train_indices[:num_val_samples]
-    new_train_indices = train_indices[num_val_samples:]
-
-    train_dir = os.path.join(fold_output_dir, 'train', category)
-    os.makedirs(train_dir, exist_ok=True)
-    val_dir = os.path.join(fold_output_dir, 'validation', category)
-    os.makedirs(val_dir, exist_ok=True)
-
-    if test_indices:
-        test_dir = os.path.join(fold_output_dir, 'test', category)
-        os.makedirs(test_dir, exist_ok=True)
-
-    for idx in new_train_indices:
-        src = image_files[idx]
-        shutil.copy(src, os.path.join(train_dir, os.path.basename(src)))
-
-    for idx in val_indices:
-        src = image_files[idx]
-        shutil.copy(src, os.path.join(val_dir, os.path.basename(src)))
-
-    for idx in test_indices:
-        src = image_files[idx]
-        if 'test_dir' in locals():  # Check if the test_dir was created
-            shutil.copy(src, os.path.join(test_dir, os.path.basename(src)))
-
-
-if __name__ == '__main__':
-    create_datasets('./BFRB data/BFRB data', './dataset_separated_new', max_samples_per_category=400)
+if __name__ == "__main__":
+    source_path = os.path.join('.', 'BFRB data', 'BFRB data')
+    base_path = os.path.join('.', 'processed_data')
+    distribute_files(source_path, base_path)
