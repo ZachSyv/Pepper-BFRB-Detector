@@ -1,8 +1,8 @@
 import os
 import tensorflow as tf
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.layers import Input, Flatten, Dense, Dropout, Conv2D, GlobalAveragePooling2D, MaxPooling2D
-from tensorflow.keras.models import Model
+from keras.preprocessing.image import ImageDataGenerator
+from keras.layers import Input, Flatten, Dense, Dropout, Conv2D, GlobalAveragePooling2D, MaxPooling2D
+from keras.models import Model
 from collections import defaultdict
 import json
 
@@ -34,9 +34,10 @@ def setup_model(model_name, input_shape, num_categories):
 
     input_tensor = Input(shape=input_shape)
     x = base_model(input_tensor)
-    x = Flatten()(x)
-    x = Dense(256, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)  # Added L2 regularization
-    x = Dropout(0.50)(x) 
+    x = Conv2D(filters=64, kernel_size=(3, 3), activation='relu')(x)
+    x = GlobalAveragePooling2D()(x)
+    x = Dense(256, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = Dropout(0.5)(x)
     output_tensor = Dense(num_categories, activation='softmax')(x)
     model = Model(inputs=input_tensor, outputs=output_tensor)
 
@@ -108,9 +109,9 @@ if __name__ == '__main__':
         model_configs = [
             # {'model_name': 'VGG16', 'input_size': (224, 224, 3)},
             # {'model_name': 'VGG19', 'input_size': (224, 224, 3)},
-            {'model_name': 'Xception', 'input_size': (299, 299, 3)},
+            # {'model_name': 'Xception', 'input_size': (299, 299, 3)},
             # {'model_name': 'ResNet50', 'input_size': (224, 224, 3)},
-            # {'model_name': 'InceptionResNetV2', 'input_size': (299, 299, 3)},
+            {'model_name': 'InceptionResNetV2', 'input_size': (299, 299, 3)},
             # {'model_name': 'EfficientNetV2S', 'input_size': (300, 300, 3)}, 
             # {'model_name': 'NASNetLarge', 'input_size': (331, 331, 3)}
         ]
