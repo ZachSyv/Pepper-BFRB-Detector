@@ -7,22 +7,37 @@ from collections import defaultdict
 import json
 
 def setup_model(model_name, input_shape, num_categories):
+    # base_model = tf.keras.applications.__dict__[model_name](weights='imagenet', include_top=False, input_shape=input_shape)
+    # for layer in base_model.layers:
+    #     layer.trainable = False
+
+    # input_tensor = Input(shape=input_shape)
+    # x = base_model(input_tensor)
+    # x = Conv2D(filters=256, kernel_size=(3, 3), activation='relu', padding='same')(x)
+    # x = Dropout(0.25)(x)
+    # x = MaxPooling2D(2, 2)(x)
+    # x = Conv2D(filters=128, kernel_size=(3, 3), activation='relu', padding='same')(x)
+    # x = Dropout(0.25)(x)
+    # x = MaxPooling2D(2, 2)(x)
+    # x = Conv2D(filters=64, kernel_size=(3, 3), activation='relu', padding='same')(x)
+    # x = GlobalAveragePooling2D()(x)
+    # output_tensor = Dense(num_categories, activation='softmax')(x)
+
+    # model = Model(inputs=input_tensor, outputs=output_tensor)
+
+    # model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+    #               loss='categorical_crossentropy',
+    #               metrics=['accuracy'])
     base_model = tf.keras.applications.__dict__[model_name](weights='imagenet', include_top=False, input_shape=input_shape)
     for layer in base_model.layers:
         layer.trainable = False
 
     input_tensor = Input(shape=input_shape)
     x = base_model(input_tensor)
-    x = Conv2D(filters=256, kernel_size=(3, 3), activation='relu', padding='same')(x)
-    x = Dropout(0.25)(x)
-    x = MaxPooling2D(2, 2)(x)
-    x = Conv2D(filters=128, kernel_size=(3, 3), activation='relu', padding='same')(x)
-    x = Dropout(0.25)(x)
-    x = MaxPooling2D(2, 2)(x)
-    x = Conv2D(filters=64, kernel_size=(3, 3), activation='relu', padding='same')(x)
-    x = GlobalAveragePooling2D()(x)
+    x = Flatten()(x)
+    x = Dense(256, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)  # Added L2 regularization
+    x = Dropout(0.50)(x) 
     output_tensor = Dense(num_categories, activation='softmax')(x)
-
     model = Model(inputs=input_tensor, outputs=output_tensor)
 
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
@@ -79,12 +94,16 @@ def train_across_folds(base_dir, model_config, epochs):
             train_dir = os.path.join(base_dir, sub_directory, 'train')
             val_dir = os.path.join(base_dir, sub_directory, 'validation')
             train_generator, validation_generator = get_data_generators(train_dir, val_dir, model_config['input_size'][:2])
+            print(train_generator.class_indices)
+            with open('class_indices.json', 'w') as f:
+                json.dump(train_generator.class_indices, f) 
             model = setup_model(model_config['model_name'], model_config['input_size'], len(os.listdir(train_dir)))
             train_and_save_model(model, train_generator, validation_generator, epochs, fold, model_config['model_name'], base_dir)
 
 
+
 if __name__ == '__main__':    
-    base_dirs = ['./dataset_separated']
+    base_dirs = ['./dataset']
     for base_dir in base_dirs:
         model_configs = [
             # {'model_name': 'VGG16', 'input_size': (224, 224, 3)},

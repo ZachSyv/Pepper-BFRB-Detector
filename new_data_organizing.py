@@ -1,3 +1,4 @@
+
 import os
 import shutil
 from random import seed, sample
@@ -13,8 +14,10 @@ def create_directories(base_path, categories):
                 print(f"Created directory: {dir_path}")
 
 def distribute_files(source_path, base_path):
-    categories = [cat for cat in os.listdir(source_path) if os.path.isdir(os.path.join(source_path, cat))]
+    cat_labels = ['Hair-Pulling', 'Nail-Biting', 'Non-BFRB', 'Beard-Pulling', 'Eyebrow-Pulling']
+    categories = [cat for cat in os.listdir(source_path) if (os.path.isdir(os.path.join(source_path, cat)) and cat in cat_labels)]
     global_person_ids = sorted({d for cat in categories for d in os.listdir(os.path.join(source_path, cat)) if os.path.isdir(os.path.join(source_path, cat, d))})
+
 
     create_directories(base_path, categories)
 
@@ -23,20 +26,18 @@ def distribute_files(source_path, base_path):
             category_path = os.path.join(source_path, category)
             person_path = os.path.join(category_path, person_id)
             
-            if os.path.exists(person_path):
-                print(f"Processing fold for person: {person_id} in category: {category}")
-                train_persons = [p for p in global_person_ids if p != person_id]
+            print(f"Processing fold for person: {person_id} in category: {category}")
+            train_persons = [p for p in global_person_ids if p != person_id]
 
-                # Distribute test data
+            # Distribute test data
+            if os.path.exists(person_path) and os.listdir(person_path):  # Ensure there's data to copy
                 distribute_files_to_set(person_path, os.path.join(base_path, f'fold_{i+1}', 'test', category), person_id)
 
-                # Get train data for other persons
-                for train_person in train_persons:
-                    train_person_path = os.path.join(category_path, train_person)
-                    if os.path.exists(train_person_path):
-                        distribute_files_to_set(train_person_path, os.path.join(base_path, f'fold_{i+1}', 'train', category), train_person)
-            else:
-                print(f"No data available for person: {person_id} in category: {category}, folder remains empty.")
+            # Get train data for other persons
+            for train_person in train_persons:
+                train_person_path = os.path.join(category_path, train_person)
+                if os.path.exists(train_person_path) and os.listdir(train_person_path):
+                    distribute_files_to_set(train_person_path, os.path.join(base_path, f'fold_{i+1}', 'train', category), train_person)
 
             # Create validation set by sampling from train set
             train_set_path = os.path.join(base_path, f'fold_{i+1}', 'train', category)
@@ -59,6 +60,6 @@ def distribute_files_to_set(source_folder, dest_base_path, person_id):
             shutil.copy(file_path, os.path.join(dest_base_path, new_filename))
 
 if __name__ == "__main__":
-    source_path = os.path.join('.', 'sequence_dataset')
-    base_path = os.path.join('.', 'processed_data_sequence')
+    source_path = os.path.join('.', 'BFRB data')
+    base_path = os.path.join('.', 'dataset')
     distribute_files(source_path, base_path)
