@@ -88,17 +88,32 @@ def process_models():
         model = load_model(model_path)
         input_size = model_configs[model_name]
 
-        # Simulated testing across people array - in real application, adjust to use actual data
         for person_id in people:
             accuracy, predictions, true_labels = test_model(model, model_name, person_id, input_size)
             results_by_architecture[model_name].append((accuracy, predictions, true_labels))
 
-    # Aggregation and reporting per architecture
     for architecture, results in results_by_architecture.items():
         fold_accuracies = [result[0] for result in results]
         mean_accuracy = np.mean(fold_accuracies)
+        
+        # Concatenate all predictions and true labels across folds for detailed reports
+        all_predictions = np.concatenate([result[1] for result in results])
+        all_true_labels = np.concatenate([result[2] for result in results])
+
+        # Generate overall reports
+        report = classification_report(all_true_labels, all_predictions, target_names=classes)
+        cm = confusion_matrix(all_true_labels, all_predictions, labels=range(len(classes)))
+        cm_display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes)
+
+        # Save and display the report and confusion matrix
         print(f"Mean accuracy for {architecture}: {mean_accuracy}")
-        # Further processing can be added to handle individual reports and confusion matrices
+        print(report)
+        
+        fig, ax = plt.subplots(figsize=(10, 10))
+        cm_display.plot(ax=ax, cmap='Blues')
+        plt.title(f'Confusion Matrix for {architecture}')
+        plt.savefig(os.path.join(output_path, f'confusion_matrix_{architecture}.png'))
+        plt.close()
 
 if __name__ == "__main__":
     process_models()
