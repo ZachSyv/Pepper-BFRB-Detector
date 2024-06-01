@@ -1,7 +1,7 @@
 
 import os
 import shutil
-from random import seed, sample
+from random import seed, choice
 
 seed(42)
 
@@ -18,41 +18,34 @@ def distribute_files(source_path, base_path):
     categories = [cat for cat in os.listdir(source_path) if (os.path.isdir(os.path.join(source_path, cat)) and cat in cat_labels)]
     global_person_ids = sorted({d for cat in categories for d in os.listdir(os.path.join(source_path, cat)) if os.path.isdir(os.path.join(source_path, cat, d))})
 
-
     create_directories(base_path, categories)
 
     for i, person_id in enumerate(global_person_ids):
         for category in categories:
             category_path = os.path.join(source_path, category)
             person_path = os.path.join(category_path, person_id)
-            
-            print(f"Processing fold for person: {person_id} in category: {category}")
+
+            # Assign one person's data to validation set before copying
             train_persons = [p for p in global_person_ids if p != person_id]
+            valid_train_persons = [p for p in train_persons if os.path.exists(os.path.join(category_path, p)) and os.listdir(os.path.join(category_path, p))]
+            if valid_train_persons:
+                validation_person = choice(valid_train_persons)
+                validation_person_path = os.path.join(category_path, validation_person)
+                distribute_files_to_set(validation_person_path, os.path.join(base_path, f'fold_{i+1}', 'validation', category), validation_person)
 
             # Distribute test data
-            if os.path.exists(person_path) and os.listdir(person_path):  # Ensure there's data to copy
+            if os.path.exists(person_path) and os.listdir(person_path):
                 distribute_files_to_set(person_path, os.path.join(base_path, f'fold_{i+1}', 'test', category), person_id)
 
-            # Get train data for other persons
-            for train_person in train_persons:
+            # Get train data for other persons not chosen for validation
+            remaining_train_persons = [p for p in valid_train_persons if p != validation_person]
+            for train_person in remaining_train_persons:
                 train_person_path = os.path.join(category_path, train_person)
                 if os.path.exists(train_person_path) and os.listdir(train_person_path):
                     distribute_files_to_set(train_person_path, os.path.join(base_path, f'fold_{i+1}', 'train', category), train_person)
 
-            # Create validation set by sampling from train set
-            train_set_path = os.path.join(base_path, f'fold_{i+1}', 'train', category)
-            all_files = [os.path.join(train_set_path, f) for f in os.listdir(train_set_path)
-                         if os.path.isfile(os.path.join(train_set_path, f)) and
-                         f.lower().endswith(('.png', '.jpg', '.jpeg')) and not f.startswith('cropped_')]
-            if all_files:
-                sample_size = min(len(all_files) // 6, len(all_files))
-                validation_files = sample(all_files, sample_size) if sample_size > 0 else []
-                for file_path in validation_files:
-                    new_filename = f"{os.path.basename(file_path).split('.')[0]}_{os.path.basename(train_set_path)}.{'.'.join(os.path.basename(file_path).split('.')[1:])}"
-                    shutil.move(file_path, os.path.join(base_path, f'fold_{i+1}', 'validation', category, new_filename))
-
 def distribute_files_to_set(source_folder, dest_base_path, person_id):
-    print(f"Copying files from {source_folder}")
+    print(f"Copying files from {source_folder} to {dest_base_path}")
     for file in os.listdir(source_folder):
         file_path = os.path.join(source_folder, file)
         if os.path.isfile(file_path) and file.lower().endswith(('.png', '.jpg', '.jpeg')) and not file.startswith('cropped_'):
