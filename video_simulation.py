@@ -58,15 +58,15 @@ def test_model(model, model_name, person_id, input_size):
     all_true_labels = []
 
     # Adjusted path to correctly locate the video frames within each category
-    for category in os.listdir(base_path):
-        category_path = os.path.join(base_path, category, "Video frames")
-        for video_dir in os.listdir(category_path):
-            if video_dir.startswith('Video'):
-                video_path = os.path.join(category_path, video_dir)
-                predictions = process_video_frames(video_path, model, category, input_size)
-                all_predictions.extend(predictions)
-                all_true_labels.extend([category] * len(predictions))
-
+    cat_paths = [cat for cat in os.listdir(base_path) if cat in classes]
+    for category in cat_paths:
+        category_path = os.path.join(base_path, category, person_id)
+        video_dirs = [v_dir for v_dir in os.listdir(category_path) if v_dir.startswith('Video')]
+        for video_dir in video_dirs:
+            video_path = os.path.join(category_path, video_dir)
+            predictions = process_video_frames(video_path, model, category, input_size)
+            all_predictions.extend(predictions)
+            all_true_labels.extend([category] * len(predictions))
     accuracy = np.mean(np.array(all_predictions) == np.array(all_true_labels))
     return accuracy, all_predictions, all_true_labels
 
