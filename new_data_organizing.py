@@ -7,10 +7,8 @@ from mtcnn.mtcnn import MTCNN
 from PIL import Image
 import numpy as np
 
-def create_datasets(data_dir, output_dir, merge_categories=False,  max_samples_per_category=400):
-    merge_map = {'Beard-Pulling': 'Facial Hair-Pulling', 'Eyebrow-Pulling': 'Facial Hair-Pulling'} if merge_categories else {}
-    categories = ['Hair-Pulling', 'Nail-Biting', 'Non-BFRB', 'Facial Hair-Pulling'] if merge_categories else ['Hair-Pulling', 'Nail-Biting', 'Non-BFRB', 'Beard-Pulling', 'Eyebrow-Pulling']
-
+def create_datasets(data_dir, output_dir, merge_categories=False,  max_samples_per_category=900):
+    categories = ['Hair-Pulling', 'Nail-Biting', 'Non-BFRB', 'Beard-Pulling', 'Eyebrow-Pulling']
     valid_groups = set()
     for root, dirs, files in os.walk(data_dir):
         valid_groups.update([d for d in dirs if not d.startswith('.')])
@@ -191,4 +189,4 @@ def crop_and_save_images(data_dir):
 
 if __name__ == '__main__':
     # crop_and_save_images('./BFRB data/BFRB data')
-    create_datasets('./BFRB data/BFRB data', './dataset_separated', merge_categories=False)
+    create_datasets('./BFRB data', './dataset_separated_old', merge_categories=False)

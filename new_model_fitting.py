@@ -15,8 +15,6 @@ def setup_model(model_name, input_shape, num_categories):
     x = base_model(input_tensor)
     x = Conv2D(filters=64, kernel_size=(3, 3), activation='relu')(x)
     x = GlobalAveragePooling2D()(x)
-    x = Dense(512, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
-    x = Dropout(0.5)(x)
     x = Dense(256, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
     x = Dropout(0.5)(x)
     output_tensor = Dense(num_categories, activation='softmax')(x)

@@ -10,3 +10,6 @@ confusion*
 history/
 separated/
 merged/
+sequence_dataset/
+processed*
+new_dataset/

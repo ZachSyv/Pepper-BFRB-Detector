@@ -1,5 +1,5 @@
 import tensorflow as tf
-from keras.preprocessing.image import ImageDataGenerator
+from keras.src.legacy.preprocessing.image import ImageDataGenerator
 from keras.models import load_model
 import numpy as np
 from sklearn.metrics import classification_report
@@ -10,7 +10,7 @@ import os
 import glob
 
 if __name__ == '__main__':
-    base_dir = 'dataset_separated/'
+    base_dir = 'dataset_separated_old/'
     model_dir = 'models/'
     model_files = glob.glob(os.path.join(model_dir, '*.keras'))
     folds = [f for f in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, f))]
