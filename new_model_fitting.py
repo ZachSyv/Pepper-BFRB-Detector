@@ -79,7 +79,7 @@ def get_fold_directories(base_dir):
 
 def train_and_save_model(model, train_generator, validation_generator, epochs, fold_id, model_name, base_model):
     history = model.fit(train_generator, epochs=epochs, validation_data=validation_generator)
-    model_save_path = f'models/{model_name}_{base_dir[2:]}_{fold_id}'
+    model_save_path = f'models/{model_name}_{base_dir[2:]}_{fold_id}.keras'
     model.save(model_save_path)
     print(f'Model saved to {model_save_path}')
 
@@ -109,9 +109,9 @@ if __name__ == '__main__':
         model_configs = [
             # {'model_name': 'VGG16', 'input_size': (224, 224, 3)},
             # {'model_name': 'VGG19', 'input_size': (224, 224, 3)},
-            # {'model_name': 'Xception', 'input_size': (299, 299, 3)},
+            {'model_name': 'Xception', 'input_size': (299, 299, 3)},
             # {'model_name': 'ResNet50', 'input_size': (224, 224, 3)},
-            {'model_name': 'InceptionResNetV2', 'input_size': (299, 299, 3)},
+            # {'model_name': 'InceptionResNetV2', 'input_size': (299, 299, 3)},
             # {'model_name': 'EfficientNetV2S', 'input_size': (300, 300, 3)}, 
             # {'model_name': 'NASNetLarge', 'input_size': (331, 331, 3)}
         ]

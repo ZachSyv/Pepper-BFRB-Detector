@@ -18,9 +18,10 @@ classes = ['Beard-Pulling', 'Eyebrow-Pulling', 'Hair-Pulling', 'Nail-Biting', 'N
 
 
 def process_video_frames(video_path, model, true_category, input_size):
-    frame_files = sorted(os.listdir(video_path))
+    frame_files = sorted([p for p in os.listdir(video_path) if p.endswith('.png', '.jpg', '.jpeg')])
     chunk_size = 25
     num_chunks = len(frame_files) // chunk_size + (1 if len(frame_files) % chunk_size != 0 else 0)
+
     predictions = []
 
     for i in range(num_chunks):
@@ -36,7 +37,6 @@ def process_video_frames(video_path, model, true_category, input_size):
             frame_array = np.expand_dims(frame_array, axis=0)
             
             prediction = model.predict(frame_array)
-            # plt.imsave(os.path.join(output_path, f'{frame_file}.png'), frame_array[0])
             predicted_class_index = np.argmax(prediction, axis=1)[0]
             predicted_class = classes[predicted_class_index]
 
