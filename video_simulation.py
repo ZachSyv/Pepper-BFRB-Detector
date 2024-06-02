@@ -4,6 +4,8 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 from keras.models import load_model
+from keras.layers import Input, Flatten, Dense, Dropout, Conv2D, GlobalAveragePooling2D, MaxPooling2D
+from keras.models import Model
 
 # Directory and people setup
 base_path = './BFRB data'
@@ -15,6 +17,25 @@ if not os.path.exists(output_path):
 
 # Class labels and indices
 classes = ['Beard-Pulling', 'Eyebrow-Pulling', 'Hair-Pulling', 'Nail-Biting', 'Non-BFRB']
+
+def setup_model(model_name, input_shape, num_categories):
+    base_model = tf.keras.applications.__dict__[model_name](weights='imagenet', include_top=False, input_shape=input_shape)
+    for layer in base_model.layers:
+        layer.trainable = False
+
+    input_tensor = Input(shape=input_shape)
+    x = base_model(input_tensor)
+    x = Conv2D(filters=64, kernel_size=(3, 3), activation='relu')(x)
+    x = GlobalAveragePooling2D()(x)
+    x = Dense(256, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = Dropout(0.5)(x)
+    output_tensor = Dense(num_categories, activation='softmax')(x)
+    model = Model(inputs=input_tensor, outputs=output_tensor)
+
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+                  loss='categorical_crossentropy',
+                  metrics=['accuracy'])
+    return model
 
 
 def process_video_frames(video_path, model, true_category, input_size):
@@ -92,7 +113,8 @@ def process_models():
         model_name = model_file.split('_')[0]
         fold = model_file.split('_')[-1].split('.')[0]
         print(model_path)
-        model = load_model(model_path)
+        model = setup_model(model_name, input_size, 5)
+        model.load_weights(model_path)
         input_size = model_configs[model_name]
         person_id = people[int(fold)-1]
 
