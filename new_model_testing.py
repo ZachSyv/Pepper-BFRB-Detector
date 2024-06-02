@@ -1,6 +1,8 @@
 import tensorflow as tf
 from keras.preprocessing.image import ImageDataGenerator
 from keras.models import load_model
+from keras.layers import Input, Flatten, Dense, Dropout, Conv2D, GlobalAveragePooling2D, MaxPooling2D
+from keras.models import Model
 import numpy as np
 from sklearn.metrics import classification_report
 from sklearn.metrics import ConfusionMatrixDisplay
@@ -8,6 +10,25 @@ from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import os
 import glob
+
+def setup_model(model_name, input_shape, num_categories):
+    base_model = tf.keras.applications.__dict__[model_name](weights='imagenet', include_top=False, input_shape=input_shape)
+    for layer in base_model.layers:
+        layer.trainable = False
+
+    input_tensor = Input(shape=input_shape)
+    x = base_model(input_tensor)
+    x = Conv2D(filters=64, kernel_size=(3, 3), activation='relu')(x)
+    x = GlobalAveragePooling2D()(x)
+    x = Dense(256, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.01))(x)
+    x = Dropout(0.5)(x)
+    output_tensor = Dense(num_categories, activation='softmax')(x)
+    model = Model(inputs=input_tensor, outputs=output_tensor)
+
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+                  loss='categorical_crossentropy',
+                  metrics=['accuracy'])
+    return model
 
 if __name__ == '__main__':
     base_dir = 'dataset_separated/'
@@ -25,13 +46,13 @@ if __name__ == '__main__':
             {'model_name': 'NASNetLarge', 'input_size': (331, 331, 3)}
         ]
     
-    fixed_categories = ['Hair-Pulling', 'Nail-Biting', 'Non-BFRB', 'Beard-Pulling', 'Eyebrow-Pulling']
+    fixed_categories = ['Beard-Pulling', 'Eyebrow-Pulling', 'Hair-Pulling', 'Nail-Biting', 'Non-BFRB']
     
     for model_path in model_files:
         modelfile_name = os.path.basename(model_path).replace('.keras', '')
         model_name = modelfile_name.split('_')[0]
         fold = modelfile_name.split('_')[-1]
-        print(model_name)
+        print(model_path)
         for config in model_configs:
             if config['model_name'] == model_name:
                 input_size = config['input_size']
@@ -45,9 +66,11 @@ if __name__ == '__main__':
             class_mode='categorical',
             shuffle=False
         )
-        model = load_model(model_path)
+        model = setup_model(model_name, input_size, 5)
+        model.load_weights(model_path)
         predictions = model.predict(test_generator, steps=len(test_generator))
         predicted_classes = np.argmax(predictions, axis=1)
+
 
         true_classes = test_generator.classes
         class_labels = list(test_generator.class_indices.keys())

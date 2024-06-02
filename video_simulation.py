@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
-from tensorflow.keras.models import load_model
+from keras.models import load_model
 
 # Directory and people setup
 base_path = './BFRB data'
@@ -18,7 +18,7 @@ classes = ['Beard-Pulling', 'Eyebrow-Pulling', 'Hair-Pulling', 'Nail-Biting', 'N
 
 
 def process_video_frames(video_path, model, true_category, input_size):
-    frame_files = sorted([p for p in os.listdir(video_path) if p.endswith('.png', '.jpg', '.jpeg')])
+    frame_files = sorted([p for p in os.listdir(video_path) if p.endswith(('.png', '.jpg', '.jpeg'))])
     chunk_size = 25
     num_chunks = len(frame_files) // chunk_size + (1 if len(frame_files) % chunk_size != 0 else 0)
 
@@ -53,13 +53,18 @@ def process_video_frames(video_path, model, true_category, input_size):
 
 
 def generate_reports(predictions, true_labels, modelfile_name):
-    report = classification_report(true_labels, predictions, target_names=classes)
-    fig, ax = plt.subplots(figsize=(6, 4))
-    ax.text(0.5, 0.5, report, horizontalalignment='center', verticalalignment='center',
-            fontsize=12, transform=ax.transAxes)
-    plt.axis('off')
-    plt.title(f'Classification Report for {modelfile_name}')
-    plt.savefig(f'./output/classification_report_{modelfile_name}.png', dpi=300, bbox_inches='tight')
+    unique_labels = np.unique(true_labels + predictions)
+    target_names = [cls for cls in classes if cls in unique_labels]
+    if target_names:  # Ensure target_names is not empty
+        report = classification_report(true_labels, predictions, target_names=target_names, labels=unique_labels)
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.text(0.5, 0.5, report, horizontalalignment='center', verticalalignment='center',
+                fontsize=12, transform=ax.transAxes)
+        plt.axis('off')
+        plt.title(f'Classification Report for {modelfile_name}')
+        plt.savefig(f'./output/classification_report_{modelfile_name}.png', dpi=300, bbox_inches='tight')
+    else:
+        print("No valid classes found for reporting.")
 
     cm = confusion_matrix(true_labels, predictions, labels=classes)
     cm_display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes)
