@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 from tensorflow.keras.models import load_model
 
-# Directory structure and people array
+# Directory and people setup
 base_path = './BFRB data'
 models_path = './models'
 output_path = './output'
@@ -14,11 +14,10 @@ if not os.path.exists(output_path):
     os.makedirs(output_path)
 
 # Class labels and indices
-class_indices = {'Beard-Pulling': 0, 'Eyebrow-Pulling': 1, 'Hair-Pulling': 2, 'Nail-Biting': 3, 'Non-BFRB': 4}
 classes = ['Beard-Pulling', 'Eyebrow-Pulling', 'Hair-Pulling', 'Nail-Biting', 'Non-BFRB']
 
+
 def process_video_frames(video_path, model, true_category, input_size):
-    """Process frames in chunks and monitor behavior changes, returning a prediction for each chunk."""
     frame_files = sorted(os.listdir(video_path))
     chunk_size = 25
     num_chunks = len(frame_files) // chunk_size + (1 if len(frame_files) % chunk_size != 0 else 0)
@@ -37,38 +36,39 @@ def process_video_frames(video_path, model, true_category, input_size):
             frame_array = np.expand_dims(frame_array, axis=0)
             
             prediction = model.predict(frame_array)
+            # plt.imsave(os.path.join(output_path, f'{frame_file}.png'), frame_array[0])
             predicted_class_index = np.argmax(prediction, axis=1)[0]
             predicted_class = classes[predicted_class_index]
-            prediction_confidence = np.max(prediction)
 
+            prediction_confidence = np.max(prediction)
             if prediction_confidence > 0.7:
                 confident_predictions[predicted_class] += 1
                 if confident_predictions[predicted_class] > 2:
-                    predictions.append(predicted_class if predicted_class == true_category else 'Incorrect detection')
+                    predictions.append(predicted_class)
                     break
         else:
-            # If no confident detection over threshold is found in the chunk
-            predictions.append('Non-BFRB' if true_category == 'Non-BFRB' else 'Incorrect detection')
+            predictions.append('Non-BFRB')
 
     return predictions
 
-def test_model(model, model_name, person_id, input_size):
-    """Test the model and generate reports for predictions."""
-    all_predictions = []
-    all_true_labels = []
 
-    # Adjusted path to correctly locate the video frames within each category
-    cat_paths = [cat for cat in os.listdir(base_path) if cat in classes]
-    for category in cat_paths:
-        category_path = os.path.join(base_path, category, person_id)
-        video_dirs = [v_dir for v_dir in os.listdir(category_path) if v_dir.startswith('Video')]
-        for video_dir in video_dirs:
-            video_path = os.path.join(category_path, video_dir)
-            predictions = process_video_frames(video_path, model, category, input_size)
-            all_predictions.extend(predictions)
-            all_true_labels.extend([category] * len(predictions))
-    accuracy = np.mean(np.array(all_predictions) == np.array(all_true_labels))
-    return accuracy, all_predictions, all_true_labels
+def generate_reports(predictions, true_labels, modelfile_name):
+    report = classification_report(true_labels, predictions, target_names=classes)
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.text(0.5, 0.5, report, horizontalalignment='center', verticalalignment='center',
+            fontsize=12, transform=ax.transAxes)
+    plt.axis('off')
+    plt.title(f'Classification Report for {modelfile_name}')
+    plt.savefig(f'./output/classification_report_{modelfile_name}.png', dpi=300, bbox_inches='tight')
+
+    cm = confusion_matrix(true_labels, predictions, labels=classes)
+    cm_display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes)
+    fig, ax = plt.subplots(figsize=(10, 10))
+    cm_display.plot(ax=ax, cmap=plt.cm.Blues, xticks_rotation='vertical')
+    plt.title(f'Confusion Matrix for {modelfile_name}')
+    ax.set_xticklabels(classes, rotation=45, ha="right")
+    ax.set_yticklabels(classes, rotation=45, ha="right")
+    plt.savefig(f'./output/confusion_matrix_{modelfile_name}.png')
 
 def process_models():
     model_configs = {
@@ -80,40 +80,38 @@ def process_models():
         'EfficientNetV2S': (300, 300, 3), 
         'NASNetLarge': (331, 331, 3)
     }
-    results_by_architecture = {model: [] for model in model_configs}
+    results_by_architecture = {model: {'predictions': [], 'labels': []} for model in model_configs}
 
     for model_file in sorted(os.listdir(models_path)):
         model_path = os.path.join(models_path, model_file)
         model_name = model_file.split('_')[0]
+        fold = model_file.split('_')[-1].split('.')[0]
+        print(model_path)
         model = load_model(model_path)
         input_size = model_configs[model_name]
+        person_id = people[int(fold)-1]
 
-        for person_id in people:
-            accuracy, predictions, true_labels = test_model(model, model_name, person_id, input_size)
-            results_by_architecture[model_name].append((accuracy, predictions, true_labels))
+        all_predictions = []
+        all_true_labels = []
 
-    for architecture, results in results_by_architecture.items():
-        fold_accuracies = [result[0] for result in results]
-        mean_accuracy = np.mean(fold_accuracies)
-        
-        # Concatenate all predictions and true labels across folds for detailed reports
-        all_predictions = np.concatenate([result[1] for result in results])
-        all_true_labels = np.concatenate([result[2] for result in results])
+        cat_paths = [cat for cat in os.listdir(base_path) if cat in classes]
+        for category in cat_paths:
+            if person_id in os.listdir(os.path.join(base_path, category)):
+                category_path = os.path.join(base_path, category, person_id)
+                video_dirs = [v_dir for v_dir in os.listdir(category_path) if v_dir.lower().startswith('video')]
+                for video_dir in video_dirs:
+                    video_path = os.path.join(category_path, video_dir)
+                    predictions = process_video_frames(video_path, model, category, input_size)
+                    all_predictions.extend(predictions)
+                    all_true_labels.extend([category] * len(predictions))
 
-        # Generate overall reports
-        report = classification_report(all_true_labels, all_predictions, target_names=classes)
-        cm = confusion_matrix(all_true_labels, all_predictions, labels=range(len(classes)))
-        cm_display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes)
+        generate_reports(all_predictions, all_true_labels, f'{model_name}_fold{fold}')
+        results_by_architecture[model_name]['predictions'].extend(all_predictions)
+        results_by_architecture[model_name]['labels'].extend(all_true_labels)
 
-        # Save and display the report and confusion matrix
-        print(f"Mean accuracy for {architecture}: {mean_accuracy}")
-        print(report)
-        
-        fig, ax = plt.subplots(figsize=(10, 10))
-        cm_display.plot(ax=ax, cmap='Blues')
-        plt.title(f'Confusion Matrix for {architecture}')
-        plt.savefig(os.path.join(output_path, f'confusion_matrix_{architecture}.png'))
-        plt.close()
+    # Generate aggregate reports for each architecture
+    for model, data in results_by_architecture.items():
+        generate_reports(data['predictions'], data['labels'], model)
 
 if __name__ == "__main__":
     process_models()

@@ -6,7 +6,7 @@ import time
 seed(42)
 
 def create_directories(base_path, categories):
-    for i in range(9): 
+    for i in range(9):  # Assuming there are 9 person_ids
         for subset in ['train', 'test', 'validation']:
             for category in categories:
                 dir_path = os.path.join(base_path, f'fold_{i+1}', subset, category)
@@ -24,7 +24,7 @@ def distribute_files(source_path, base_path):
         for category in categories:
             category_path = os.path.join(source_path, category)
             person_path = os.path.join(category_path, person_id)
-            image_limit = 1750 if category == 'Non-BFRB' else 500
+            image_limit = 1250 if category == 'Non-BFRB' else 500
             print(f"Processing category: {category}, Fold: {i+1}")
 
             train_persons = [p for p in global_person_ids if p != person_id]
