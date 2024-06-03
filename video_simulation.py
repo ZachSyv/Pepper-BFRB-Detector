@@ -6,6 +6,7 @@ from sklearn.metrics import classification_report, confusion_matrix, ConfusionMa
 from keras.models import load_model
 from keras.layers import Input, Flatten, Dense, Dropout, Conv2D, GlobalAveragePooling2D, MaxPooling2D
 from keras.models import Model
+import tensorflow as tf
 
 # Directory and people setup
 base_path = './BFRB data'
@@ -62,12 +63,15 @@ def process_video_frames(video_path, model, true_category, input_size):
             predicted_class = classes[predicted_class_index]
 
             prediction_confidence = np.max(prediction)
-            if prediction_confidence > 0.7:
+            print(f'{predicted_class}: {prediction_confidence}')
+            if prediction_confidence > 0.6 and predicted_class != 'Non-BFRB':
                 confident_predictions[predicted_class] += 1
                 if confident_predictions[predicted_class] > 2:
                     predictions.append(predicted_class)
+                    print(f'{predicted_class} detected, real category: {true_category}')
                     break
         else:
+            print(f'Non-BFRB detected, real category: {true_category}')
             predictions.append('Non-BFRB')
 
     return predictions
@@ -76,16 +80,19 @@ def process_video_frames(video_path, model, true_category, input_size):
 def generate_reports(predictions, true_labels, modelfile_name):
     unique_labels = np.unique(true_labels + predictions)
     target_names = [cls for cls in classes if cls in unique_labels]
-    if target_names:  # Ensure target_names is not empty
-        report = classification_report(true_labels, predictions, target_names=target_names, labels=unique_labels)
-        fig, ax = plt.subplots(figsize=(6, 4))
-        ax.text(0.5, 0.5, report, horizontalalignment='center', verticalalignment='center',
-                fontsize=12, transform=ax.transAxes)
-        plt.axis('off')
-        plt.title(f'Classification Report for {modelfile_name}')
-        plt.savefig(f'./output/classification_report_{modelfile_name}.png', dpi=300, bbox_inches='tight')
-    else:
-        print("No valid classes found for reporting.")
+    print(target_names)
+    print(true_labels)
+    print(predictions)
+    # if target_names:  # Ensure target_names is not empty
+    report = classification_report(true_labels, predictions, target_names=classes)
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.text(0.5, 0.5, report, horizontalalignment='center', verticalalignment='center',
+            fontsize=12, transform=ax.transAxes)
+    plt.axis('off')
+    plt.title(f'Classification Report for {modelfile_name}')
+    plt.savefig(f'./output/classification_report_{modelfile_name}.png', dpi=300, bbox_inches='tight')
+    # else:
+    #     print("No valid classes found for reporting.")
 
     cm = confusion_matrix(true_labels, predictions, labels=classes)
     cm_display = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classes)
@@ -106,14 +113,16 @@ def process_models():
         'EfficientNetV2S': (300, 300, 3), 
         'NASNetLarge': (331, 331, 3)
     }
-    results_by_architecture = {model: {'predictions': [], 'labels': []} for model in model_configs}
+    # results_by_architecture = {model: {'predictions': [], 'labels': []} for model in model_configs}
+    results_by_architecture = {}
 
     for model_file in sorted(os.listdir(models_path)):
         model_path = os.path.join(models_path, model_file)
         model_name = model_file.split('_')[0]
         fold = model_file.split('_')[-1].split('.')[0]
         print(model_path)
-        model = setup_model(model_name, input_size, 5)
+        
+        model = setup_model(model_name, model_configs[model_name], 5)
         model.load_weights(model_path)
         input_size = model_configs[model_name]
         person_id = people[int(fold)-1]
@@ -132,9 +141,16 @@ def process_models():
                     all_predictions.extend(predictions)
                     all_true_labels.extend([category] * len(predictions))
 
-        generate_reports(all_predictions, all_true_labels, f'{model_name}_fold{fold}')
-        results_by_architecture[model_name]['predictions'].extend(all_predictions)
-        results_by_architecture[model_name]['labels'].extend(all_true_labels)
+        # generate_reports(all_predictions, all_true_labels, f'{model_name}_fold{fold}')
+        
+        if model_name not in results_by_architecture:
+            results_by_architecture[model_name] = {}
+            results_by_architecture[model_name]['predictions'] = all_predictions
+            results_by_architecture[model_name]['labels'] = all_true_labels
+        else:
+            results_by_architecture[model_name]['predictions'].extend(all_predictions)
+            results_by_architecture[model_name]['labels'].extend(all_true_labels)
+        print(all_predictions, all_true_labels)
 
     # Generate aggregate reports for each architecture
     for model, data in results_by_architecture.items():

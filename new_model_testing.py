@@ -31,7 +31,7 @@ def setup_model(model_name, input_shape, num_categories):
     return model
 
 if __name__ == '__main__':
-    base_dir = 'dataset_separated/'
+    base_dir = 'dataset_new/'
     model_dir = 'models/'
     model_files = glob.glob(os.path.join(model_dir, '*.keras'))
     folds = [f for f in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, f))]
@@ -57,7 +57,7 @@ if __name__ == '__main__':
             if config['model_name'] == model_name:
                 input_size = config['input_size']
                 break
-        
+    
         test_datagen = ImageDataGenerator(rescale=1./255)
         test_generator = test_datagen.flow_from_directory(
             directory=os.path.join(base_dir, f'fold_{fold}', 'test'),

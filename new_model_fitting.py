@@ -7,27 +7,6 @@ from collections import defaultdict
 import json
 
 def setup_model(model_name, input_shape, num_categories):
-    # base_model = tf.keras.applications.__dict__[model_name](weights='imagenet', include_top=False, input_shape=input_shape)
-    # for layer in base_model.layers:
-    #     layer.trainable = False
-
-    # input_tensor = Input(shape=input_shape)
-    # x = base_model(input_tensor)
-    # x = Conv2D(filters=256, kernel_size=(3, 3), activation='relu', padding='same')(x)
-    # x = Dropout(0.25)(x)
-    # x = MaxPooling2D(2, 2)(x)
-    # x = Conv2D(filters=128, kernel_size=(3, 3), activation='relu', padding='same')(x)
-    # x = Dropout(0.25)(x)
-    # x = MaxPooling2D(2, 2)(x)
-    # x = Conv2D(filters=64, kernel_size=(3, 3), activation='relu', padding='same')(x)
-    # x = GlobalAveragePooling2D()(x)
-    # output_tensor = Dense(num_categories, activation='softmax')(x)
-
-    # model = Model(inputs=input_tensor, outputs=output_tensor)
-
-    # model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
-    #               loss='categorical_crossentropy',
-    #               metrics=['accuracy'])
     base_model = tf.keras.applications.__dict__[model_name](weights='imagenet', include_top=False, input_shape=input_shape)
     for layer in base_model.layers:
         layer.trainable = False
@@ -104,7 +83,7 @@ def train_across_folds(base_dir, model_config, epochs):
 
 
 if __name__ == '__main__':    
-    base_dirs = ['./dataset']
+    base_dirs = ['./dataset_new']
     for base_dir in base_dirs:
         model_configs = [
             # {'model_name': 'VGG16', 'input_size': (224, 224, 3)},
@@ -116,7 +95,7 @@ if __name__ == '__main__':
             # {'model_name': 'NASNetLarge', 'input_size': (331, 331, 3)}
         ]
 
-        epochs = 15
+        epochs = 10
 
         for model_config in model_configs:
             train_across_folds(base_dir, model_config, epochs)

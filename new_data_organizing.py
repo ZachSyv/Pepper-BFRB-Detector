@@ -24,7 +24,7 @@ def distribute_files(source_path, base_path):
         for category in categories:
             category_path = os.path.join(source_path, category)
             person_path = os.path.join(category_path, person_id)
-            image_limit = 1250 if category == 'Non-BFRB' else 500
+            image_limit = 1500 if category == 'Non-BFRB' else 750
             print(f"Processing category: {category}, Fold: {i+1}")
 
             train_persons = [p for p in global_person_ids if p != person_id]
@@ -75,6 +75,6 @@ def unique_filename(file_path, person_id=None):
 
 if __name__ == "__main__":
     source_path = os.path.join('.', 'BFRB data')
-    base_path = os.path.join('.', 'dataset')
+    base_path = os.path.join('.', 'dataset_new')
     distribute_files(source_path, base_path)
 
